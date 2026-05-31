@@ -1,0 +1,26 @@
+maiz-trazabilidad-root/
+├── backend/                  # Middleware API REST (Node.js/Express)
+│   ├── config/               # Configuración de IPs locales (IPFS, Fabric, Hardhat)
+│   ├── controllers/          # Lógica de endpoints (registrar, notarizar, exportar)
+│   ├── services/             # Abstracción de llamadas a IPFS, Fabric, BFA y Hardhat
+│   ├── package.json
+│   └── server.js             # Orquestador principal de la solución
+├── blockchain-public/        # Capa de Tokenización Pública (Hardhat / Polygon local)
+│   ├── contracts/            # Contrato Solidity ERC-721 (OpenZeppelin)
+│   │   └── TrazabilidadMaizNFT.sol
+│   ├── scripts/              # Script de despliegue local
+│   │   └── deploy.js
+│   ├── package.json
+│   └── hardhat.config.js     # Configuración de red EVM local (Port 8545)
+├── blockchain-private-mock/  # Capa Transaccional Privada (Hyperledger Fabric Mock)
+│   │                         # Nota: Se emula mediante persistencia relacional/NoSQL 
+│   │                         # con lógica criptográfica estricta para persistir canales privados.
+│   └── fabricMockLedger.js   
+├── frontend/                 # Interfaz de Usuario Web/Móvil (HTML5 / Vanilla JS u offline-first)
+│   ├── public/
+│   │   └── index.html        # Panel del Productor y Verificador de Aduanas (verifbfa.com)
+│   ├── src/
+│   │   ├── app.js            # Lógica de UI, generación de QR y lector analítico
+│   │   └── sw.js             # Service Worker para capturas en zonas sin conectividad rural
+│   └── package.json
+└── README.md                 # Guía paso a paso para levantar todo el ecosistema local

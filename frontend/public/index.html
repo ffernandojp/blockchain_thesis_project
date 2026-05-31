@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgTech Trazabilidad Maíz</title>
+    <!-- Registro del Service Worker en el head para disponibilidad rápida -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Service Worker en la misma carpeta para el scope correcto
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registrado', reg.scope))
+                    .catch(err => console.error('Error al registrar SW', err));
+            });
+        }
+    </script>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --secondary: #fbc02d;
+            --bg: #f5f5f5;
+            --text: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: var(--primary);
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input,
+        button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #1b5e20;
+        }
+
+        .status-bar {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .offline {
+            background: #ffcc80;
+            color: #e65100;
+            border-left: 5px solid #e65100;
+        }
+
+        .online {
+            background: #c8e6c9;
+            color: #1b5e20;
+            border-left: 5px solid #1b5e20;
+        }
+
+        .timeline {
+            margin-top: 30px;
+            border-top: 2px dashed #ccc;
+            padding-top: 20px;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            padding: 10px;
+            background: #fafafa;
+            border-left: 4px solid var(--secondary);
+            margin-bottom: 10px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .success-text {
+            color: var(--primary);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🌾 Trazabilidad de Maíz (AgTech)</h1>
+
+        <!-- Panel Offline-First -->
+        <div id="connection-status" class="status-bar online">Estado: Online</div>
+
+        <!-- Formulario Productor -->
+        <div id="registro-panel">
+            <h2>1. Registrar Cosecha Primaria</h2>
+            <form id="registro-form">
+                <div class="form-group">
+                    <label>ID Lote:</label>
+                    <input type="text" id="idLote" placeholder="Ej: LOTE-001" required>
+                </div>
+                <div class="form-group">
+                    <label>RENSPA Origen:</label>
+                    <input type="text" id="renspa" placeholder="Ej: 01.002.0.00034/00" required>
+                </div>
+                <div class="form-group">
+                    <label>Volumen (Toneladas):</label>
+                    <input type="number" id="volumen" placeholder="Ej: 30" required>
+                </div>
+                <button type="submit">Registrar (Soporta Offline)</button>
+            </form>
+        </div>
+
+        <div class="timeline" id="resultados">
+            <h2>Log de Transacciones / Sincronización</h2>
+            <ul id="sync-list"></ul>
+        </div>
+    </div>
+
+    <script src="./app.js"></script>
+</body>
+
+</html>
