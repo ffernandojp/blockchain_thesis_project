@@ -29,7 +29,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.post('/api/lotes/registrar', upload.single('documento'), async (req, res) => {
   try {
     const { idLote, renspa, geolocalizacion, volumenToneladas } = req.body;
-    
+
     let ipfsCID = null;
     if (req.file) {
       ipfsCID = await ipfsService.uploadRegulatoryDocument(req.file.buffer, req.file.originalname);
@@ -46,6 +46,23 @@ app.post('/api/lotes/registrar', upload.single('documento'), async (req, res) =>
 });
 
 /**
+ * GET /api/lotes/:id (Consulta Pública - Verificador QR)
+ * Devuelve la traza completa del lote.
+ */
+app.get('/api/lotes/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const lote = fabricLedger.obtenerLote(id);
+
+    if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
+
+    res.json({ success: true, data: lote });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * 2. POST /api/lotes/notarizar (SENASA/AFIP)
  * Simula sellado en Blockchain Federal Argentina (BFA).
  */
@@ -53,22 +70,26 @@ app.post('/api/lotes/notarizar', async (req, res) => {
   try {
     const { idLote } = req.body;
     const lote = fabricLedger.obtenerLote(idLote);
-    
+
     if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
 
     // Calculamos un Hash SHA-256 de los datos críticos como simulación de Notarización
     const hashData = `${lote.id}-${lote.renspa}-${lote.volumenToneladas}-${lote.ipfsCID}`;
     const bfaHash = crypto.createHash('sha256').update(hashData).digest('hex');
 
-    const loteActualizado = fabricLedger.actualizarEstadoLogistico(
-      idLote, 
-      'VERIFICADO_BFA', 
-      'SENASA/AFIP', 
-      'Sellado criptográfico en BFA exitoso', 
-      bfaHash
-    );
+    // Simular latencia de BFA y actualización asíncrona
+    setTimeout(() => {
+      fabricLedger.actualizarEstadoLogistico(
+        idLote,
+        'VERIFICADO_BFA',
+        'SENASA/AFIP',
+        'Sellado criptográfico en BFA exitoso',
+        bfaHash
+      );
+      console.log(`✅ [BFA] Lote ${idLote} notarizado. Hash: ${bfaHash}`);
+    }, 2000); // 2 segundos de latencia simulada
 
-    res.json({ success: true, data: loteActualizado });
+    res.json({ success: true, message: "Proceso de notarización en BFA iniciado asíncronamente." });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -94,7 +115,7 @@ app.post('/api/lotes/exportar', async (req, res) => {
         { trait_type: 'RENSPA Origen', value: lote.renspa }
       ]
     };
-    
+
     // Convertimos a base64 para el URI de la blockchain
     const metadataBase64 = Buffer.from(JSON.stringify(tokenMetadata)).toString('base64');
     const tokenURI = `data:application/json;base64,${metadataBase64}`;
@@ -109,9 +130,9 @@ app.post('/api/lotes/exportar', async (req, res) => {
 
     // Actualizar ledger privado final
     const loteFinal = fabricLedger.actualizarEstadoLogistico(
-      idLote, 
-      'EXPORTADO', 
-      'Exportador', 
+      idLote,
+      'EXPORTADO',
+      'Exportador',
       `NFT minteado. TX: ${tx.hash}`
     );
 
@@ -120,8 +141,8 @@ app.post('/api/lotes/exportar', async (req, res) => {
 
     res.json({ success: true, qr: qrString, txHash: tx.hash, data: loteFinal });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: "Error en blockchain local. Asegurese de que Hardhat Node esté corriendo." });
+    console.error("Error detallado al exportar:", error);
+    res.status(500).json({ success: false, error: `Fallo al exportar: ${error.reason || error.message}` });
   }
 });
 
