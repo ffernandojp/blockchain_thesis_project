@@ -150,8 +150,47 @@
                     <label>Volumen (Toneladas):</label>
                     <input type="number" id="volumen" placeholder="Ej: 30" required>
                 </div>
+                <div class="form-group">
+                    <label>Carta de Porte (PDF):</label>
+                    <input type="file" id="documento" accept="application/pdf">
+                </div>
                 <button type="submit">Registrar (Soporta Offline)</button>
             </form>
+        </div>
+
+        <div id="notarizar-panel" style="margin-top: 20px;">
+            <h2>2. Notarizar BFA (SENASA/AFIP)</h2>
+            <form id="notarizar-form">
+                <div class="form-group">
+                    <label>ID Lote a Notarizar:</label>
+                    <input type="text" id="idLoteNotarizar" placeholder="Ej: LOTE-001" required>
+                </div>
+                <button type="submit" style="background-color: #1976d2;">Sellar en Blockchain Federal Argentina</button>
+            </form>
+        </div>
+
+        <div id="exportar-panel" style="margin-top: 20px;">
+            <h2>3. Cierre Logístico (Exportador)</h2>
+            <form id="exportar-form">
+                <div class="form-group">
+                    <label>ID Lote a Exportar:</label>
+                    <input type="text" id="idLoteExportar" placeholder="Ej: LOTE-001" required>
+                </div>
+                <div class="form-group">
+                    <label>Dirección Wallet Exportador (Para el NFT):</label>
+                    <input type="text" id="walletExportador" placeholder="0x..." required>
+                </div>
+                <button type="submit" style="background-color: #7b1fa2;">Acuñar NFT y Generar QR Público</button>
+            </form>
+        </div>
+
+        <div id="qr-result-panel" style="margin-top: 20px; display: none; text-align: center; background: #e8f5e9; padding: 20px; border-radius: 8px;">
+            <h3 style="color: #2e7d32;">✅ NFT Generado Exitosamente</h3>
+            <p>Escanee el código QR o haga clic en el enlace para verificar la trazabilidad pública:</p>
+            <div style="margin: 15px 0;">
+                <img id="qr-image" src="" alt="Código QR NFT" style="display: none; margin: 0 auto; border: 4px solid white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+            </div>
+            <a id="qr-link" href="#" target="_blank" style="font-weight: bold; font-size: 1.1em; color: #1565c0;">Verificar Lote Público</a>
         </div>
 
         <div class="timeline" id="resultados">
