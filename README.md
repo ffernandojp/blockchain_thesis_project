@@ -24,8 +24,13 @@ npm install express cors multer axios form-data ethers hardhat @nomicfoundation/
 ### 2. Iniciar IPFS (Almacenamiento Descentralizado)
 Abre una **NUEVA pestaña** en la terminal y arranca el demonio de IPFS:
 ```bash
-ipfs init # Sólo ejecuta esto si es tu primera vez usando IPFS en tu PC
+ipfs init # Sólo ejecuta esto si es la primera vez que usas IPFS en tu PC
 ipfs daemon
+```
+o si da error
+```bash
+~/.local/bin/ipfs init
+~/.local/bin/ipfs daemon
 ```
 *(El nodo IPFS quedará escuchando en http://127.0.0.1:5001)*
 
