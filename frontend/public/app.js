@@ -1,9 +1,75 @@
-// app.js - Lógica Frontend Offline-First con IndexedDB
+// app.js - Lógica Frontend Offline-First con IndexedDB y JWT Auth
 
 document.addEventListener('DOMContentLoaded', () => {
     const statusDiv = document.getElementById('connection-status');
     const form = document.getElementById('registro-form');
     const syncList = document.getElementById('sync-list');
+    
+    // UI Elements Auth
+    const loginPanel = document.getElementById('login-panel');
+    const loginForm = document.getElementById('login-form');
+    const userInfoPanel = document.getElementById('user-info-panel');
+    const currentRoleSpan = document.getElementById('current-role');
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    const registroPanel = document.getElementById('registro-panel');
+    const notarizarPanel = document.getElementById('notarizar-panel');
+    const exportarPanel = document.getElementById('exportar-panel');
+
+    function evaluarPantalla() {
+        const token = localStorage.getItem('agtech_token');
+        const role = localStorage.getItem('agtech_role');
+
+        if (!token) {
+            loginPanel.style.display = 'block';
+            userInfoPanel.style.display = 'none';
+            registroPanel.style.display = 'none';
+            notarizarPanel.style.display = 'none';
+            exportarPanel.style.display = 'none';
+        } else {
+            loginPanel.style.display = 'none';
+            userInfoPanel.style.display = 'block';
+            currentRoleSpan.textContent = role;
+            
+            registroPanel.style.display = role === 'Productor Agrícola' ? 'block' : 'none';
+            notarizarPanel.style.display = role === 'Organismo de Control (SENASA/AFIP)' ? 'block' : 'none';
+            exportarPanel.style.display = role === 'Exportador (Puertos)' ? 'block' : 'none';
+        }
+    }
+
+    evaluarPantalla(); // Inicializar vista
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('login-user').value;
+        const password = document.getElementById('login-pass').value;
+        try {
+            const res = await fetch('http://localhost:3000/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (data.success) {
+                localStorage.setItem('agtech_token', data.token);
+                localStorage.setItem('agtech_role', data.rol);
+                evaluarPantalla();
+                loginForm.reset();
+                agregarLog(`<span class="success-text">✅ Sesión iniciada como ${data.rol}</span>`);
+            } else {
+                alert("Error de login: " + data.error);
+            }
+        } catch (err) {
+            alert("Error de red al intentar loguearse");
+        }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('agtech_token');
+        localStorage.removeItem('agtech_role');
+        evaluarPantalla();
+        agregarLog(`ℹ️ Sesión cerrada.`);
+    });
     
     // IndexedDB Setup
     let db;
@@ -73,7 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const res = await fetch('http://localhost:3000/api/lotes/notarizar', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
+                    },
                     body: JSON.stringify({ idLote })
                 });
                 const result = await res.json();
@@ -102,7 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const res = await fetch('http://localhost:3000/api/lotes/exportar', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
+                    },
                     body: JSON.stringify({ idLote, exportadorAddress })
                 });
                 const result = await res.json();
@@ -187,6 +259,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const res = await fetch('http://localhost:3000/api/lotes/registrar', {
                 method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
+                },
                 // No configuramos Content-Type, fetch lo infiere como multipart/form-data y agrega el boundary automático
                 body: formData
             });

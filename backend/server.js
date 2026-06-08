@@ -6,6 +6,17 @@ const { ethers } = require('ethers');
 
 const fabricLedger = require('../blockchain-private-mock/fabricMockLedger');
 const ipfsService = require('./services/ipfsService');
+const jwt = require('jsonwebtoken');
+const pdf = require('pdf-parse');
+
+const JWT_SECRET = 'tesina_secreto_123';
+
+const USUARIOS = [
+  { username: 'productor1', password: '123', rol: 'Productor Agrícola', renspa: '01.002.0.00345/00' },
+  { username: 'acopio_coop', password: '123', rol: 'Acopiador / Cooperativa' },
+  { username: 'senasa_fiscal', password: '123', rol: 'Organismo de Control (SENASA/AFIP)' },
+  { username: 'exportador_bb', password: '123', rol: 'Exportador (Puertos)' }
+];
 
 // Configuraciones Hardhat local
 const HARDHAT_RPC = "http://127.0.0.1:8545";
@@ -22,18 +33,66 @@ app.use(express.json());
 // Multer en memoria para recibir archivos antes de pasar a IPFS
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Middleware de verificación de Rol
+function verificarRol(rolesPermitidos) {
+  return (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'Token no provisto o formato inválido' });
+    }
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (!rolesPermitidos.includes(decoded.rol)) {
+        return res.status(403).json({ success: false, error: 'Acceso denegado para este rol' });
+      }
+      req.user = decoded;
+      next();
+    } catch (error) {
+      return res.status(401).json({ success: false, error: 'Token inválido o expirado' });
+    }
+  };
+}
+
+/**
+ * POST /api/auth/login
+ * Autenticación ligera simulada
+ */
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  const user = USUARIOS.find(u => u.username === username && u.password === password);
+  if (!user) {
+    return res.status(401).json({ success: false, error: 'Credenciales inválidas' });
+  }
+  const tokenPayload = {
+    username: user.username,
+    rol: user.rol,
+    renspa: user.renspa
+  };
+  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '8h' });
+  res.json({ success: true, token, rol: user.rol });
+});
+
 /**
  * 1. POST /api/lotes/registrar (Productor)
  * Sube Carta de Porte a IPFS y registra en ledger privado.
  */
-app.post('/api/lotes/registrar', upload.single('documento'), async (req, res) => {
+app.post('/api/lotes/registrar', verificarRol(['Productor Agrícola']), upload.single('documento'), async (req, res) => {
   try {
-    const { idLote, renspa, geolocalizacion, volumenToneladas } = req.body;
+    const { idLote, geolocalizacion, volumenToneladas } = req.body;
+    const renspa = req.user.renspa;
 
-    let ipfsCID = null;
-    if (req.file) {
-      ipfsCID = await ipfsService.uploadRegulatoryDocument(req.file.buffer, req.file.originalname);
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'El archivo PDF de Carta de Porte es obligatorio' });
     }
+
+    const pdfData = await pdf(req.file.buffer);
+    const text = pdfData.text.toUpperCase();
+    if (!text.includes('CARTA DE PORTE ELECTRÓNICA') || !(text.includes('CTG') || text.includes('CÓDIGO DE TRAZABILIDAD DE GRANOS'))) {
+      return res.status(400).json({ success: false, error: 'Oráculo: El documento no es una Carta de Porte válida' });
+    }
+
+    let ipfsCID = await ipfsService.uploadRegulatoryDocument(req.file.buffer, req.file.originalname);
 
     const nuevoLote = fabricLedger.registrarCosechaPrimaria(
       idLote, renspa, geolocalizacion, volumenToneladas, ipfsCID
@@ -66,7 +125,7 @@ app.get('/api/lotes/:id', (req, res) => {
  * 2. POST /api/lotes/notarizar (SENASA/AFIP)
  * Simula sellado en Blockchain Federal Argentina (BFA).
  */
-app.post('/api/lotes/notarizar', async (req, res) => {
+app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/AFIP)']), async (req, res) => {
   try {
     const { idLote } = req.body;
     const lote = fabricLedger.obtenerLote(idLote);
@@ -99,7 +158,7 @@ app.post('/api/lotes/notarizar', async (req, res) => {
  * 3. POST /api/lotes/exportar (Exportador)
  * Acuña el NFT en la blockchain pública local (Hardhat) y genera QR info.
  */
-app.post('/api/lotes/exportar', async (req, res) => {
+app.post('/api/lotes/exportar', verificarRol(['Exportador (Puertos)']), async (req, res) => {
   try {
     const { idLote, exportadorAddress } = req.body;
     const lote = fabricLedger.obtenerLote(idLote);

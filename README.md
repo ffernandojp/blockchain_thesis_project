@@ -61,9 +61,9 @@ node server.js
 Para evitar problemas de CORS y permitir la correcta instalación del Service Worker, sirve los archivos estáticos utilizando un servidor local. Puedes usar `npx serve`:
 ```bash
 cd frontend/public
-npx serve -l 8080 .
+npx serve -l 3000 .
 ```
-- Ingresa desde tu navegador a `http://localhost:8080/index.html`.
+- Ingresa desde tu navegador a `http://localhost:3000/index.html`.
 - Apaga tu WiFi para probar el registro en caché local (Modo Offline).
 - Reactiva el WiFi y el sistema sincronizará automáticamente los datos con la blockchain mockeada.
 
