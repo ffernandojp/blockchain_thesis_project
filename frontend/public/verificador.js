@@ -30,13 +30,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function mostrarError(msg) {
         loader.style.display = 'none';
-        mainContainer.innerHTML += `<div class="error"><h3>⚠️ Error</h3><p>${msg}</p></div>`;
+        mainContainer.innerHTML += `
+            <div class="card error-card">
+                <div class="error-icon">⚠️</div>
+                <div class="error-text">${msg}</div>
+            </div>`;
     }
 
     function renderTimeline(lote, txHashQuery) {
         loader.style.display = 'none';
         content.style.display = 'block';
-        loteTitle.textContent = `Lote Verificado: ${lote.id}`;
+        loteTitle.textContent = `${lote.id}`;
 
         let html = '';
 
@@ -44,28 +48,93 @@ document.addEventListener('DOMContentLoaded', async () => {
         html += `
             <div class="timeline-item">
                 <div class="content">
-                    <span class="badge ipfs">1. Registro de Cosecha Primaria</span>
+                    <div class="badges-container">
+                        <span class="badge ipfs">1. Registro Primario</span>
+                    </div>
                     <h3>Productor Origen</h3>
-                    <p><strong>RENSPA:</strong> ${lote.renspa}</p>
-                    <p><strong>Volumen Declarado:</strong> ${lote.volumenToneladas} TN</p>
-                    <p><strong>Geolocalización:</strong> ${lote.geolocalizacion}</p>
-                    ${lote.ipfsCID ? `<p><strong>Carta de Porte (IPFS):</strong> <a href="http://127.0.0.1:8080/ipfs/${lote.ipfsCID}" target="_blank" class="hash">${lote.ipfsCID}</a></p>` : ''}
-                    <p><small>Estado: COSECHADO</small></p>
+                    <div class="data-grid">
+                        <div class="data-row">
+                            <span class="data-label">RENSPA</span>
+                            <span class="data-value">${lote.renspa}</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Volumen Declarado</span>
+                            <span class="data-value">${lote.volumenToneladas} TN</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Geolocalización</span>
+                            <span class="data-value">${lote.geolocalizacion}</span>
+                        </div>
+                    </div>
+                    ${lote.ipfsCID ? `
+                    <div class="hash-container">
+                        <span class="hash-label">Carta de Porte (IPFS)</span>
+                        <a href="http://127.0.0.1:8080/ipfs/${lote.ipfsCID}" target="_blank" class="hash">${lote.ipfsCID}</a>
+                    </div>` : ''}
                 </div>
             </div>
         `;
 
-        // Paso 2: Notarización BFA (Estado/AFIP/SENASA)
+        // Paso Transporte
+        const transTx = lote.historialTransacciones.find(t => t.accion === 'CAMBIO_ESTADO: EN_TRANSITO');
+        if (transTx) {
+            html += `
+                <div class="timeline-item">
+                    <div class="content">
+                        <div class="badges-container">
+                            <span class="badge" style="background: #fef08a; color: #854d0e;">Transporte Seguro</span>
+                        </div>
+                        <h3>Logística y Transporte</h3>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px;">Carga movilizada con Carta de Porte Electrónica (CPE).</p>
+                        <div class="data-grid">
+                            <div class="data-row">
+                                <span class="data-label">Estado</span>
+                                <span class="data-value">En Tránsito</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Paso Acopio
+        const acopioTx = lote.historialTransacciones.find(t => t.accion === 'CAMBIO_ESTADO: ACONDICIONADO');
+        if (acopioTx) {
+            // Extraer pesaje y calidad de los detalles
+            let detallesText = acopioTx.detalles || 'Acondicionamiento completado.';
+            html += `
+                <div class="timeline-item">
+                    <div class="content">
+                        <div class="badges-container">
+                            <span class="badge" style="background: #d9f99d; color: #3f6212;">Acopio y Acondicionamiento</span>
+                        </div>
+                        <h3>Planta Receptora</h3>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px;">El lote ha sido pesado, secado y acondicionado.</p>
+                        <div class="data-grid">
+                            <div class="data-row">
+                                <span class="data-label">Parámetros Registrados</span>
+                                <span class="data-value">${detallesText}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Paso Notarización BFA (Estado/AFIP/SENASA)
         if (lote.bfaHash) {
             html += `
                 <div class="timeline-item">
                     <div class="content">
-                        <span class="badge bfa">2. Notarización Estatal (BFA)</span>
+                        <div class="badges-container">
+                            <span class="badge bfa">2. Notarización Estatal</span>
+                        </div>
                         <h3>SENASA / AFIP</h3>
-                        <p>Los datos han sido sellados en la Blockchain Federal Argentina.</p>
-                        <p><strong>BFA Hash (SHA-256):</strong></p>
-                        <p class="hash">${lote.bfaHash}</p>
-                        <p><small>Estado: VERIFICADO_BFA</small></p>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px;">Los datos han sido sellados en la Blockchain Federal Argentina.</p>
+                        <div class="hash-container">
+                            <span class="hash-label">BFA Hash (SHA-256)</span>
+                            <span class="hash">${lote.bfaHash}</span>
+                        </div>
                     </div>
                 </div>
             `;
@@ -74,18 +143,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Paso 3: Exportación (NFT Hardhat/Polygon)
         const exportTx = lote.historialTransacciones.find(t => t.accion === 'CAMBIO_ESTADO: EXPORTADO');
         if (exportTx || txHashQuery) {
-            // Extraer TX hash del detalle si existe
-            let txHash = txHashQuery || (exportTx && exportTx.detalles.match(/TX:\s*(0x[a-fA-F0-9]+)/) ? exportTx.detalles.match(/TX:\s*(0x[a-fA-F0-9]+)/)[1] : 'Pendiente');
+            let txHash = txHashQuery || (exportTx && exportTx.detalles.match(/TX:\\s*(0x[a-fA-F0-9]+)/) ? exportTx.detalles.match(/TX:\\s*(0x[a-fA-F0-9]+)/)[1] : 'Pendiente');
             
             html += `
                 <div class="timeline-item">
                     <div class="content">
-                        <span class="badge polygon">3. Certificado de Exportación NFT</span>
+                        <div class="badges-container">
+                            <span class="badge polygon">3. Certificado NFT</span>
+                        </div>
                         <h3>Exportador en Puerto</h3>
-                        <p>El cierre logístico ha sido minteado como un NFT inmutable.</p>
-                        <p><strong>Transaction Hash:</strong></p>
-                        <p class="hash">${txHash}</p>
-                        <p><small>Red: Hardhat / Polygon Local</small></p>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px;">El cierre logístico ha sido minteado como un NFT inmutable.</p>
+                        <div class="hash-container">
+                            <span class="hash-label">Transaction Hash</span>
+                            <span class="hash">${txHash}</span>
+                        </div>
                     </div>
                 </div>
             `;

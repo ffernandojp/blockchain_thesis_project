@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgTech Trazabilidad Maíz</title>
+    <title>AgTech Portal Privado - Trazabilidad Maíz</title>
+    <link rel="stylesheet" href="./css/portal.css">
     <!-- Registro del Service Worker en el head para disponibilidad rápida -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -16,208 +17,217 @@
             });
         }
     </script>
-    <style>
-        :root {
-            --primary: #2e7d32;
-            --secondary: #fbc02d;
-            --bg: #f5f5f5;
-            --text: #333;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            color: var(--primary);
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        input,
-        button {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
-
-        button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #1b5e20;
-        }
-
-        .status-bar {
-            padding: 10px;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            text-align: center;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-
-        .offline {
-            background: #ffcc80;
-            color: #e65100;
-            border-left: 5px solid #e65100;
-        }
-
-        .online {
-            background: #c8e6c9;
-            color: #1b5e20;
-            border-left: 5px solid #1b5e20;
-        }
-
-        .timeline {
-            margin-top: 30px;
-            border-top: 2px dashed #ccc;
-            padding-top: 20px;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        li {
-            padding: 10px;
-            background: #fafafa;
-            border-left: 4px solid var(--secondary);
-            margin-bottom: 10px;
-            font-family: monospace;
-            word-break: break-all;
-        }
-
-        .success-text {
-            color: var(--primary);
-            font-weight: bold;
-        }
-    </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>🌾 Trazabilidad de Maíz (AgTech)</h1>
-
-        <!-- Panel Offline-First -->
-        <div id="connection-status" class="status-bar online">Estado: Online</div>
-
-        <!-- Login Institucional -->
-        <div id="login-panel" style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h2 style="color: #1565c0; margin-top: 0;">Ingreso Institucional</h2>
-            <form id="login-form">
-                <div class="form-group">
-                    <label>Usuario Institucional:</label>
-                    <input type="text" id="login-user" placeholder="productor1, senasa_fiscal, etc." required>
-                </div>
-                <div class="form-group">
-                    <label>Contraseña:</label>
-                    <input type="password" id="login-pass" required>
-                </div>
-                <button type="submit" style="background-color: #1565c0;">Iniciar Sesión Segura</button>
-            </form>
-        </div>
-
-        <div id="user-info-panel" style="display: none; background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
-            <p style="margin: 0; font-weight: bold; color: #2e7d32;">Autenticado como: <span id="current-role"></span></p>
-            <button id="logout-btn" style="background-color: #d32f2f; width: auto; padding: 5px 15px; margin-top: 10px;">Cerrar Sesión</button>
-        </div>
-
-        <!-- Formulario Productor -->
-        <div id="registro-panel" style="display: none;">
-            <h2>1. Registrar Cosecha Primaria</h2>
-            <form id="registro-form">
-                <div class="form-group">
-                    <label>ID Lote:</label>
-                    <input type="text" id="idLote" placeholder="Ej: LOTE-001" required>
-                </div>
-                <div class="form-group">
-                    <label>RENSPA Origen:</label>
-                    <input type="text" id="renspa" placeholder="Ej: 01.002.0.00034/00" required>
-                </div>
-                <div class="form-group">
-                    <label>Volumen (Toneladas):</label>
-                    <input type="number" id="volumen" placeholder="Ej: 30" required>
-                </div>
-                <div class="form-group">
-                    <label>Carta de Porte (PDF):</label>
-                    <input type="file" id="documento" accept="application/pdf">
-                </div>
-                <button type="submit">Registrar (Soporta Offline)</button>
-            </form>
-        </div>
-
-        <div id="notarizar-panel" style="margin-top: 20px; display: none;">
-            <h2>2. Notarizar BFA (SENASA/AFIP)</h2>
-            <form id="notarizar-form">
-                <div class="form-group">
-                    <label>ID Lote a Notarizar:</label>
-                    <input type="text" id="idLoteNotarizar" placeholder="Ej: LOTE-001" required>
-                </div>
-                <button type="submit" style="background-color: #1976d2;">Sellar en Blockchain Federal Argentina</button>
-            </form>
-        </div>
-
-        <div id="exportar-panel" style="margin-top: 20px; display: none;">
-            <h2>3. Cierre Logístico (Exportador)</h2>
-            <form id="exportar-form">
-                <div class="form-group">
-                    <label>ID Lote a Exportar:</label>
-                    <input type="text" id="idLoteExportar" placeholder="Ej: LOTE-001" required>
-                </div>
-                <div class="form-group">
-                    <label>Dirección Wallet Exportador (Para el NFT):</label>
-                    <input type="text" id="walletExportador" placeholder="0x..." required>
-                </div>
-                <button type="submit" style="background-color: #7b1fa2;">Acuñar NFT y Generar QR Público</button>
-            </form>
-        </div>
-
-        <div id="qr-result-panel" style="margin-top: 20px; display: none; text-align: center; background: #e8f5e9; padding: 20px; border-radius: 8px;">
-            <h3 style="color: #2e7d32;">✅ NFT Generado Exitosamente</h3>
-            <p>Escanee el código QR o haga clic en el enlace para verificar la trazabilidad pública:</p>
-            <div style="margin: 15px 0;">
-                <img id="qr-image" src="" alt="Código QR NFT" style="display: none; margin: 0 auto; border: 4px solid white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="icon">🌾</span>
+                <h1>AgTech Portal</h1>
             </div>
-            <a id="qr-link" href="#" target="_blank" style="font-weight: bold; font-size: 1.1em; color: #1565c0;">Verificar Lote Público</a>
-        </div>
 
-        <div class="timeline" id="resultados">
-            <h2>Log de Transacciones / Sincronización</h2>
-            <ul id="sync-list"></ul>
-        </div>
+            <div id="connection-status" class="status-indicator online">Estado: Online</div>
+
+            <div id="user-info-panel" class="user-profile" style="display: none;">
+                <p>Conectado como</p>
+                <h3 id="current-role">Productor</h3>
+                <button id="logout-btn" class="btn-logout">Cerrar Sesión</button>
+            </div>
+            
+            <div style="flex: 1;"></div>
+            
+            <div class="sidebar-footer" style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">
+                <p>Plataforma basada en Blockchain</p>
+                <p>Offline-First Enabled</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div class="top-bar">
+                <h2>Tablero de Trazabilidad</h2>
+            </div>
+
+            <!-- Login Institucional -->
+            <div id="login-panel" class="panel">
+                <div class="panel-header">
+                    <h2>Ingreso Institucional</h2>
+                    <p>Autenticación segura para agentes de la cadena agroindustrial</p>
+                </div>
+                <div class="login-wrapper">
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label>Usuario Institucional</label>
+                            <input type="text" id="login-user" placeholder="productor1, senasa_fiscal, etc." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Contraseña</label>
+                            <input type="password" id="login-pass" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Iniciar Sesión Segura</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Formulario Productor -->
+            <div id="registro-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>1. Registrar Cosecha Primaria</h2>
+                    <p>Declare el origen de la cosecha. Soporta operación sin conexión.</p>
+                </div>
+                <form id="registro-form">
+                    <div class="form-group">
+                        <label>ID Lote</label>
+                        <input type="text" id="idLote" placeholder="Ej: LOTE-001" required>
+                    </div>
+                    <div class="form-group">
+                        <label>RENSPA Origen</label>
+                        <input type="text" id="renspa" placeholder="Ej: 01.002.0.00034/00" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Volumen (Toneladas)</label>
+                        <input type="number" id="volumen" placeholder="Ej: 30" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Carta de Porte (PDF)</label>
+                        <input type="file" id="documento" accept="application/pdf">
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-registrar">Registrar en Blockchain</button>
+                </form>
+
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h3>Mis Lotes Activos</h3>
+                <div class="table-container" style="overflow-x: auto;">
+                    <table class="data-table" id="tabla-lotes-productor" style="width: 100%; text-align: left; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #2d6a4f;">
+                                <th>ID Lote</th>
+                                <th>Volumen</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Llenado dinámico -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Formulario Transportista -->
+            <div id="transporte-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>2. Registrar Recepción y Transporte</h2>
+                    <p>Firma digital de recepción de carga. Actualiza estado a "En Tránsito".</p>
+                </div>
+                <form id="transporte-form">
+                    <div class="form-group">
+                        <label>ID Lote Asignado</label>
+                        <select id="idLoteTransporte" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
+                            <option value="">Cargando lotes disponibles...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="text-align: center;">
+                        <label>Ruta Asignada (GPS Tracking)</label>
+                        <div style="background: #1b4332; border: 1px solid #2d6a4f; height: 150px; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                            <span style="color: #4ade80;">📍 Simulación de Mapa Origen-Destino</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-transporte" style="background-color: #fca311; color: #081c15;">Iniciar Tránsito (Firma Digital)</button>
+                </form>
+            </div>
+
+            <!-- Formulario Acopiador -->
+            <div id="acopio-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>3. Recepción en Acopio / Puerto</h2>
+                    <p>Registro de pesaje final y parámetros de calidad comercial.</p>
+                </div>
+                <form id="acopio-form">
+                    <div class="form-group">
+                        <label>Camiones Entrantes (En Tránsito)</label>
+                        <select id="idLoteAcopio" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
+                            <option value="">Cargando camiones...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Pesaje Final (Toneladas)</label>
+                        <input type="number" id="pesajeFinal" placeholder="Ej: 29.5" required step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Calidad Comercial</label>
+                        <input type="text" id="calidadComercial" placeholder="Ej: Grado 2 - Humedad 14.5%" required>
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-acopio" style="background-color: #2a9d8f;">Acondicionar Lote</button>
+                </form>
+            </div>
+
+            <!-- Notarizar SENASA -->
+            <div id="notarizar-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>4. Consola de Auditoría Estatal</h2>
+                    <p>Búsqueda global y acciones regulatorias sobre los lotes.</p>
+                </div>
+                
+                <div class="form-group" style="display: flex; gap: 10px;">
+                    <input type="search" id="input-busqueda-senasa" placeholder="Buscar por Lote o CUIT/RENSPA..." style="flex: 1;">
+                    <button type="button" class="btn-primary" id="btn-buscar-senasa" style="width: auto; background-color: #0ea5e9;">Buscar</button>
+                </div>
+
+                <div id="resultados-busqueda-senasa" style="margin-bottom: 20px;">
+                    <!-- Llenado dinámico -->
+                </div>
+
+                <form id="notarizar-form" style="display: none; padding: 15px; border: 1px solid #2d6a4f; border-radius: 8px; margin-bottom: 15px;">
+                    <h4>Acciones sobre Lote Seleccionado: <span id="lote-seleccionado-senasa"></span></h4>
+                    <input type="hidden" id="idLoteNotarizar">
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button type="submit" class="btn-primary" id="btn-notarizar" style="background-color: #0ea5e9; flex: 1;">Emitir Sello BFA</button>
+                        <button type="button" class="btn-primary" id="btn-bloquear" style="background-color: #dc2626; flex: 1;">Bloqueo Fitosanitario</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Exportar -->
+            <div id="exportar-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>3. Cierre Logístico (Exportador)</h2>
+                    <p>Acuñe el NFT representativo y genere el QR para el consumidor final.</p>
+                </div>
+                <form id="exportar-form">
+                    <div class="form-group">
+                        <label>ID Lote a Exportar</label>
+                        <input type="text" id="idLoteExportar" placeholder="Ej: LOTE-001" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Dirección Wallet Exportador</label>
+                        <input type="text" id="walletExportador" placeholder="0x..." required>
+                    </div>
+                    <button type="submit" class="btn-primary" style="background-color: #7b1fa2; box-shadow: 0 4px 6px rgba(123, 31, 162, 0.2);">Acuñar NFT y Generar QR Público</button>
+                </form>
+            </div>
+
+            <!-- Resultado QR -->
+            <div id="qr-result-panel" class="panel qr-panel" style="display: none;">
+                <h3>✅ NFT Generado Exitosamente</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Escanee el código QR o haga clic en el enlace para verificar la trazabilidad pública.</p>
+                <div class="qr-image-container">
+                    <img id="qr-image" src="" alt="Código QR NFT" style="display: none; max-width: 100%;" />
+                </div>
+                <div>
+                    <a id="qr-link" href="#" target="_blank" class="qr-link">Verificar Lote Público</a>
+                </div>
+            </div>
+
+            <!-- Timeline/Resultados -->
+            <div id="resultados" class="log-panel">
+                <h2>Log de Transacciones / Sincronización</h2>
+                <ul id="sync-list" class="sync-list"></ul>
+            </div>
+        </main>
     </div>
 
     <script src="./app.js"></script>

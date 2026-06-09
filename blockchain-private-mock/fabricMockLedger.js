@@ -100,6 +100,18 @@ class FabricMockLedger {
   obtenerLote(idLote) {
     return this.worldState.get(idLote);
   }
+
+  obtenerLotesPorRenspa(renspa) {
+    return Array.from(this.worldState.values()).filter(lote => lote.renspa === renspa);
+  }
+
+  obtenerLotesPorEstado(estado) {
+    return Array.from(this.worldState.values()).filter(lote => lote.estado === estado);
+  }
+
+  obtenerTodosLotes() {
+    return Array.from(this.worldState.values());
+  }
 }
 
 // Exportamos una instancia única (Singleton) para emular la persistencia en memoria del nodo
