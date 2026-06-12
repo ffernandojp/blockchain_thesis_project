@@ -25,12 +25,27 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const renspa = document.getElementById('renspa').value;
+        const geolocalizacion = "Lat: -34.6037, Lon: -58.3816"; // Hardcodeado para simulación
+        const timestamp = new Date().toISOString();
+        const volumenToneladas = document.getElementById('volumen').value;
+        const fileName = "offline_document.pdf"; // Fallback para el ID si no hay archivo
+
+        // Enfoque Criptográfico: Determinista por Hash (SHA-256)
+        const dataToHash = `${renspa}${geolocalizacion}${timestamp}${fileName}`;
+        const encoder = new TextEncoder();
+        const dataBuffer = encoder.encode(dataToHash);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        const generatedIdLote = '0x' + hashHex.substring(0, 16);
+
         const loteData = {
-            idLote: document.getElementById('idLote').value,
-            renspa: document.getElementById('renspa').value,
-            geolocalizacion: "Lat: -34.6037, Lon: -58.3816", // Hardcodeado para simulación
-            volumenToneladas: document.getElementById('volumen').value,
-            timestamp: new Date().toISOString()
+            idLote: generatedIdLote,
+            renspa: renspa,
+            geolocalizacion: geolocalizacion,
+            volumenToneladas: volumenToneladas,
+            timestamp: timestamp
         };
 
         if (navigator.onLine) {

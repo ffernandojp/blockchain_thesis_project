@@ -42,6 +42,49 @@ document.addEventListener('DOMContentLoaded', () => {
             exportarPanel.style.display = role === 'Exportador (Puertos)' ? 'block' : 'none';
 
             cargarDatosIniciales(role);
+
+            if (role === 'Transportista') {
+                setTimeout(initTransportMap, 300); // Dar tiempo a que el panel sea visible
+            }
+        }
+    }
+
+    let transportMap = null;
+    let transportMarker = null;
+
+    function initTransportMap() {
+        if (!document.getElementById('mapa-transporte')) return;
+        
+        // Si no existe L (Leaflet), ignorar
+        if (typeof L === 'undefined') return;
+
+        if (!transportMap) {
+            transportMap = L.map('mapa-transporte').setView([-34.6037, -58.3816], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(transportMap);
+            
+            transportMarker = L.marker([-34.6037, -58.3816]).addTo(transportMap)
+                .bindPopup('Buscando ubicación...')
+                .openPopup();
+
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition((pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    transportMap.setView([lat, lon], 15);
+                    transportMarker.setLatLng([lat, lon]).bindPopup('Tu ubicación actual (GPS)').openPopup();
+                    
+                    const placeholder = document.getElementById('map-placeholder');
+                    if (placeholder) placeholder.style.display = 'none';
+                }, (err) => {
+                    console.log("Error GPS", err);
+                    transportMarker.bindPopup('Ubicación simulada (GPS inactivo)').openPopup();
+                }, { enableHighAccuracy: true });
+            }
+        } else {
+            transportMap.invalidateSize();
         }
     }
 
@@ -63,6 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = localStorage.getItem('agtech_token');
         if (!token) return;
 
+        const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+
         try {
             if (role === 'Productor Agrícola') {
                 const res = await fetch('http://localhost:3000/api/lotes/mis-lotes', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -75,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <td>${l.volumenToneladas} TN</td>
                             <td><span class="badge" style="background:#2d6a4f;color:white;padding:4px 8px;border-radius:4px;">${l.estado}</span></td>
                             <td>
-                                <button type="button" class="btn-primary" style="padding: 4px 8px; font-size: 0.8em;" onclick="window.open('${window.location.origin}/verificador.html?id=${l.id}', '_blank')">Ver Traza / QR</button>
+                                <button type="button" class="btn-primary" style="padding: 4px 8px; font-size: 0.8em;" onclick="window.open('${window.location.origin}${basePath}/verificador?id=${l.id}', '_blank')">Ver Traza / QR</button>
                             </td>
                         </tr>
                     `).join('');
@@ -171,6 +216,54 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
 
+    // Preview Dinámico del Hash ID
+    let currentLoteTimestamp = new Date().toISOString();
+    let cachedGeo = "Lat: -34.6037, Lon: -58.3816";
+
+    const getLocation = () => new Promise((resolve) => {
+        if (!navigator.geolocation) {
+            resolve("Lat: -34.6037, Lon: -58.3816");
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => resolve(`Lat: ${pos.coords.latitude.toFixed(4)}, Lon: ${pos.coords.longitude.toFixed(4)}`),
+            (err) => resolve("Lat: -34.6037, Lon: -58.3816") // Fallback
+        );
+    });
+
+    // Obtener geolocalización de inmediato para la preview
+    getLocation().then(geo => {
+        cachedGeo = geo;
+        actualizarHashLotePreview();
+    });
+
+    async function actualizarHashLotePreview() {
+        const renspa = document.getElementById('renspa').value || '';
+        const fileInput = document.getElementById('documento');
+        const fileName = fileInput && fileInput.files.length > 0 ? fileInput.files[0].name : '';
+        
+        const idLoteInput = document.getElementById('idLote');
+        if (!idLoteInput) return;
+
+        if (!renspa || !fileName) {
+            idLoteInput.value = '';
+            return;
+        }
+
+        const dataToHash = `${renspa}${cachedGeo}${currentLoteTimestamp}${fileName}`;
+        const encoder = new TextEncoder();
+        const dataBuffer = encoder.encode(dataToHash);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        idLoteInput.value = '0x' + hashHex.substring(0, 16);
+    }
+
+    const inputRenspa = document.getElementById('renspa');
+    const inputDocumento = document.getElementById('documento');
+    if (inputRenspa) inputRenspa.addEventListener('input', actualizarHashLotePreview);
+    if (inputDocumento) inputDocumento.addEventListener('change', actualizarHashLotePreview);
+
     // Interceptar envío de formulario
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -180,12 +273,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileInput = document.getElementById('documento');
         const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
 
+        const geolocalizacionReal = await getLocation();
+        const renspa = document.getElementById('renspa').value;
+        const fileName = file ? file.name : '';
+        const timestamp = currentLoteTimestamp; // Mantenemos el timestamp del preview
+
+        // Asegurarse de que el hash sea el último antes de guardar
+        const dataToHash = `${renspa}${geolocalizacionReal}${timestamp}${fileName}`;
+        const encoder = new TextEncoder();
+        const dataBuffer = encoder.encode(dataToHash);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        const generatedIdLote = '0x' + hashHex.substring(0, 16);
+
         const loteData = {
-            idLote: document.getElementById('idLote').value,
-            renspa: document.getElementById('renspa').value,
-            geolocalizacion: "Lat: -34.6037, Lon: -58.3816", // Hardcodeado para simulación
+            idLote: generatedIdLote,
+            renspa: renspa,
+            geolocalizacion: geolocalizacionReal,
             volumenToneladas: document.getElementById('volumen').value,
-            timestamp: new Date().toISOString(),
+            timestamp: timestamp,
             documento: file // Guardar el archivo como Blob si existe
         };
 
@@ -197,6 +304,10 @@ document.addEventListener('DOMContentLoaded', () => {
         form.reset();
         setLoadingState(btn, false);
         cargarDatosIniciales('Productor Agrícola'); // Refrescar lista
+
+        // Actualizar el timestamp para el próximo lote y limpiar preview
+        currentLoteTimestamp = new Date().toISOString();
+        actualizarHashLotePreview();
     });
 
     // Interceptar envío de formulario Transporte

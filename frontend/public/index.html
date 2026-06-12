@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgTech Portal Privado - Trazabilidad Maíz</title>
     <link rel="stylesheet" href="./css/portal.css">
+    <!-- Leaflet para Mapas en Tiempo Real -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <!-- Registro del Service Worker en el head para disponibilidad rápida -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -79,10 +82,6 @@
                 </div>
                 <form id="registro-form">
                     <div class="form-group">
-                        <label>ID Lote</label>
-                        <input type="text" id="idLote" placeholder="Ej: LOTE-001" required>
-                    </div>
-                    <div class="form-group">
                         <label>RENSPA Origen</label>
                         <input type="text" id="renspa" placeholder="Ej: 01.002.0.00034/00" required>
                     </div>
@@ -93,6 +92,10 @@
                     <div class="form-group">
                         <label>Carta de Porte (PDF)</label>
                         <input type="file" id="documento" accept="application/pdf">
+                    </div>
+                    <div class="form-group">
+                        <label>ID Lote Autogenerado (Hash SHA-256)</label>
+                        <input type="text" id="idLote" readonly style="background: #1b4332; color: #4ade80; border: 1px solid #2d6a4f; cursor: not-allowed;" placeholder="Se generará al completar los datos...">
                     </div>
                     <button type="submit" class="btn-primary" id="btn-registrar">Registrar en Blockchain</button>
                 </form>
@@ -131,8 +134,8 @@
                     </div>
                     <div class="form-group" style="text-align: center;">
                         <label>Ruta Asignada (GPS Tracking)</label>
-                        <div style="background: #1b4332; border: 1px solid #2d6a4f; height: 150px; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                            <span style="color: #4ade80;">📍 Simulación de Mapa Origen-Destino</span>
+                        <div id="mapa-transporte" style="background: #1b4332; border: 1px solid #2d6a4f; height: 200px; border-radius: 8px; overflow: hidden; position: relative;">
+                            <div id="map-placeholder" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #4ade80;">📍 Obteniendo GPS...</div>
                         </div>
                     </div>
                     <button type="submit" class="btn-primary" id="btn-transporte" style="background-color: #fca311; color: #081c15;">Iniciar Tránsito (Firma Digital)</button>
