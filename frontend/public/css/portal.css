@@ -357,3 +357,49 @@ input::placeholder {
         padding: 20px;
     }
 }
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: #333;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: toast-in 0.3s forwards;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toast.success { border-left: 4px solid #4ade80; }
+.toast.warning { border-left: 4px solid #fca311; }
+.toast.error { border-left: 4px solid #ef4444; }
+
+@keyframes toast-in {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.toast.fade-out {
+    animation: toast-out 0.3s forwards;
+}
+@keyframes toast-out {
+    to {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+}

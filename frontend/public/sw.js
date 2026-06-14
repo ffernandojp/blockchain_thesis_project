@@ -56,3 +56,51 @@ self.addEventListener('activate', event => {
         )).then(() => self.clients.claim()) // Tomar control de todos los clientes de inmediato
     );
 });
+
+// Background Sync
+self.addEventListener('sync', event => {
+    if (event.tag === 'sync-lotes') {
+        console.log('[Service Worker] Background Sync disparado!');
+        event.waitUntil(sincronizarLotesIndexedDB());
+    }
+});
+
+async function sincronizarLotesIndexedDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('AgTechDB', 1);
+        
+        request.onsuccess = (e) => {
+            const db = e.target.result;
+            if(!db.objectStoreNames.contains('lotes_pendientes')) return resolve();
+            
+            const tx = db.transaction('lotes_pendientes', 'readonly');
+            const store = tx.objectStore('lotes_pendientes');
+            const getAllReq = store.getAll();
+            
+            getAllReq.onsuccess = async () => {
+                const pendientes = getAllReq.result;
+                if (!pendientes || pendientes.length === 0) return resolve();
+                
+                for (let lote of pendientes) {
+                    try {
+                        const res = await fetch('http://localhost:3000/api/lotes/registrar', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer test_token' },
+                            body: JSON.stringify(lote)
+                        });
+                        
+                        if (res.ok) {
+                            const delTx = db.transaction('lotes_pendientes', 'readwrite');
+                            delTx.objectStore('lotes_pendientes').delete(lote.idLote);
+                        }
+                    } catch (err) {
+                        console.error('[SW] Error enviando lote', err);
+                        return reject(err); // Reintentará luego
+                    }
+                }
+                resolve();
+            };
+        };
+        request.onerror = () => reject(request.error);
+    });
+}

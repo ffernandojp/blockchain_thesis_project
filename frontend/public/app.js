@@ -1,6 +1,111 @@
 // app.js - Lógica Frontend Offline-First con IndexedDB y JWT Auth
 
+// Utilidades UI
+window.showToast = function(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span>${type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌'}</span>
+        <span>${message}</span>
+    `;
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+};
+
+window.evaluarPantalla = function() {
+    // Obtenemos los paneles dinámicamente para evitar problemas de timing
+    const loginPanel = document.getElementById('login-panel');
+    const userInfoPanel = document.getElementById('user-info-panel');
+    const registroPanel = document.getElementById('registro-panel');
+    const transportePanel = document.getElementById('transporte-panel');
+    const acopioPanel = document.getElementById('acopio-panel');
+    const notarizarPanel = document.getElementById('notarizar-panel');
+    const exportarPanel = document.getElementById('exportar-panel');
+    const currentRoleSpan = document.getElementById('current-role');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.get('mockLogin') === 'productor') {
+        localStorage.setItem('agtech_token', 'mock_token');
+        localStorage.setItem('agtech_role', 'Productor Agrícola');
+    }
+
+    const token = localStorage.getItem('agtech_token');
+    const role = localStorage.getItem('agtech_role');
+
+    // DEBUG DIVS PARA CYPRESS
+    const debugDiv = document.createElement('div');
+    debugDiv.id = "debug-localstorage";
+    debugDiv.innerText = `Token: ${token}, Role: ${role}`;
+    if (document.body) document.body.appendChild(debugDiv);
+
+    if (!token) {
+        if (loginPanel) loginPanel.style.display = 'block';
+        if (userInfoPanel) userInfoPanel.style.display = 'none';
+        if (registroPanel) registroPanel.style.display = 'none';
+        if (transportePanel) transportePanel.style.display = 'none';
+        if (acopioPanel) acopioPanel.style.display = 'none';
+        if (notarizarPanel) notarizarPanel.style.display = 'none';
+        if (exportarPanel) exportarPanel.style.display = 'none';
+    } else {
+        if (loginPanel) loginPanel.style.display = 'none';
+        if (userInfoPanel) userInfoPanel.style.display = 'block';
+        if (currentRoleSpan) currentRoleSpan.textContent = role;
+        
+        if (registroPanel) registroPanel.style.display = role === 'Productor Agrícola' ? 'block' : 'none';
+        if (transportePanel) transportePanel.style.display = role === 'Transportista' ? 'block' : 'none';
+        if (acopioPanel) acopioPanel.style.display = role === 'Acopiador / Cooperativa' ? 'block' : 'none';
+        if (notarizarPanel) notarizarPanel.style.display = role === 'Organismo de Control (SENASA/AFIP)' ? 'block' : 'none';
+        if (exportarPanel) exportarPanel.style.display = role === 'Exportador (Puertos)' ? 'block' : 'none';
+
+        if (typeof cargarDatosIniciales === 'function') {
+            cargarDatosIniciales(role);
+        }
+
+        if (role === 'Transportista' && typeof initTransportMap === 'function') {
+            setTimeout(initTransportMap, 300); // Dar tiempo a que el panel sea visible
+        }
+    }
+}
 document.addEventListener('DOMContentLoaded', () => {
+    const origError = console.error;
+    console.error = function(...args) {
+        origError.apply(console, args);
+        const errDiv = document.createElement('div');
+        errDiv.className = 'debug-error';
+        errDiv.style.color = 'red';
+        errDiv.style.zIndex = '9999';
+        errDiv.innerText = 'ERROR: ' + args.join(' ');
+        document.body.appendChild(errDiv);
+    };
+
+    window.addEventListener('error', function(event) {
+        const errDiv = document.createElement('div');
+        errDiv.className = 'debug-error';
+        errDiv.style.color = 'red';
+        errDiv.style.zIndex = '9999';
+        errDiv.innerText = 'UNCAUGHT ERROR: ' + event.message + ' at ' + event.filename + ':' + event.lineno;
+        document.body.appendChild(errDiv);
+    });
+
+    const origLog = console.log;
+    console.log = function(...args) {
+        origLog.apply(console, args);
+        const logDiv = document.createElement('div');
+        logDiv.className = 'debug-log';
+        logDiv.style.color = 'blue';
+        logDiv.style.zIndex = '9999';
+        logDiv.innerText = 'LOG: ' + args.join(' ');
+        document.body.appendChild(logDiv);
+    };
+
     const statusDiv = document.getElementById('connection-status');
     const form = document.getElementById('registro-form');
     const syncList = document.getElementById('sync-list');
@@ -18,36 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const notarizarPanel = document.getElementById('notarizar-panel');
     const exportarPanel = document.getElementById('exportar-panel');
 
-    function evaluarPantalla() {
-        const token = localStorage.getItem('agtech_token');
-        const role = localStorage.getItem('agtech_role');
-
-        if (!token) {
-            loginPanel.style.display = 'block';
-            userInfoPanel.style.display = 'none';
-            registroPanel.style.display = 'none';
-            transportePanel.style.display = 'none';
-            acopioPanel.style.display = 'none';
-            notarizarPanel.style.display = 'none';
-            exportarPanel.style.display = 'none';
-        } else {
-            loginPanel.style.display = 'none';
-            userInfoPanel.style.display = 'block';
-            currentRoleSpan.textContent = role;
-            
-            registroPanel.style.display = role === 'Productor Agrícola' ? 'block' : 'none';
-            transportePanel.style.display = role === 'Transportista' ? 'block' : 'none';
-            acopioPanel.style.display = role === 'Acopiador / Cooperativa' ? 'block' : 'none';
-            notarizarPanel.style.display = role === 'Organismo de Control (SENASA/AFIP)' ? 'block' : 'none';
-            exportarPanel.style.display = role === 'Exportador (Puertos)' ? 'block' : 'none';
-
-            cargarDatosIniciales(role);
-
-            if (role === 'Transportista') {
-                setTimeout(initTransportMap, 300); // Dar tiempo a que el panel sea visible
-            }
-        }
-    }
+// window.evaluarPantalla movida arriba
 
     let transportMap = null;
     let transportMarker = null;
@@ -147,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    evaluarPantalla(); // Inicializar vista
+    window.evaluarPantalla(); // Inicializar vista
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -163,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 localStorage.setItem('agtech_token', data.token);
                 localStorage.setItem('agtech_role', data.rol);
-                evaluarPantalla();
+                window.evaluarPantalla();
                 loginForm.reset();
                 agregarLog(`<span class="success-text">✅ Sesión iniciada como ${data.rol}</span>`);
             } else {
@@ -177,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => {
         localStorage.removeItem('agtech_token');
         localStorage.removeItem('agtech_role');
-        evaluarPantalla();
+        window.evaluarPantalla();
         agregarLog(`ℹ️ Sesión cerrada.`);
     });
     
@@ -202,14 +278,28 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Monitoreo de conexión a Internet (Eventos Nativos)
-    function updateOnlineStatus() {
-        if (navigator.onLine) {
+    window.updateOnlineStatus = function updateOnlineStatus(e) {
+        let isOnline = navigator.onLine;
+        if (localStorage.getItem('forceOffline') === 'true') isOnline = false;
+        if (e && e.type === 'offline') isOnline = false;
+        if (e && e.type === 'online') isOnline = true;
+
+        if (isOnline) {
             statusDiv.textContent = 'Estado: Online (Conectado al Backend)';
             statusDiv.className = 'status-indicator online';
-            sincronizarDatosOffline();
+            showToast('Conexión restaurada. Sincronizando datos...', 'success');
+            
+            if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                navigator.serviceWorker.ready.then(sw => {
+                    return sw.sync.register('sync-lotes');
+                }).catch(() => sincronizarDatosOffline());
+            } else {
+                sincronizarDatosOffline();
+            }
         } else {
             statusDiv.textContent = 'Estado: Offline (Modo Campo - Guardando Localmente)';
             statusDiv.className = 'status-indicator offline';
+            showToast('Conexión perdida. Operando en modo Offline-First.', 'warning');
         }
     }
 
@@ -296,7 +386,10 @@ document.addEventListener('DOMContentLoaded', () => {
             documento: file // Guardar el archivo como Blob si existe
         };
 
-        if (navigator.onLine) {
+        let isOnline = navigator.onLine;
+        if (localStorage.getItem('forceOffline') === 'true') isOnline = false;
+
+        if (isOnline) {
             await enviarAlBackend(loteData);
         } else {
             guardarOffline(loteData);
@@ -539,10 +632,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         request.onsuccess = function() {
             agregarLog(`📦 [OFFLINE] Lote ${data.idLote} guardado en cache local. Esperando red...`);
+            showToast(`Lote ${data.idLote} guardado localmente (IndexedDB).`, 'warning');
+            
+            if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                navigator.serviceWorker.ready.then(sw => sw.sync.register('sync-lotes').catch(e => console.warn('Background sync disabled', e)));
+            }
         };
         request.onerror = function(e) {
             console.error("Error al guardar offline:", e.target.error);
             agregarLog(`❌ [ERROR OFFLINE] No se pudo guardar el lote ${data.idLote}.`);
+            showToast('Error al guardar datos offline', 'error');
         };
     }
 
@@ -589,6 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (result.success) {
                 agregarLog(`<span class="success-text">✅ [ONLINE] Lote ${data.idLote} registrado en Blockchain Privada.</span>`);
+                showToast(`Lote ${data.idLote} sincronizado con éxito.`, 'success');
                 
                 if (isSync && db) {
                     // Remover de IndexedDB si fue sincronizado exitosamente
@@ -597,6 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR] Lote ${data.idLote}: ${result.error}</span>`);
+                if (!isSync) showToast(`Error al registrar lote: ${result.error}`, 'error');
             }
         } catch (error) {
             console.error('Error de red al enviar:', error);

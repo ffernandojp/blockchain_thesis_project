@@ -1,0 +1,80 @@
+Warning: The allowCypressEnv configuration option is enabled. This allows any browser code to read values from Cypress.env(). This is insecure and will be removed in a future major version.
+
+1. Replace Cypress.env() calls with cy.env() (for sensitive values) or Cypress.expose() (for public configuration)
+2. Set allowCypressEnv: false in your Cypress configuration to disable Cypress.env()
+
+Learn more: https://on.cypress.io/cypress-env-migration
+
+
+================================================================================
+
+  (Run Starting)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Cypress:        15.17.0                                                                        │
+  │ Browser:        Electron 138 (headless)                                                        │
+  │ Node Version:   v26.1.0 (/usr/bin/node)                                                        │
+  │ Specs:          1 found (offline_sync.cy.js)                                                   │
+  │ Searched:       cypress/e2e/offline_sync.cy.js                                                 │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                    
+  Running:  offline_sync.cy.js                                                              (1 of 1)
+
+
+  Validación de la Estrategia Offline-First (Conectividad Rural)
+    1) Debe guardar el payload en IndexedDB cuando está offline y sincronizar al volver online
+
+
+  0 passing (4s)
+  1 failing
+
+  1) Validación de la Estrategia Offline-First (Conectividad Rural)
+       Debe guardar el payload en IndexedDB cuando está offline y sincronizar al volver online:
+     AssertionError: expected undefined to equal '30'
+      at Context.eval (webpack://blockchain_thesis_project/./cypress/e2e/offline_sync.cy.js:119:66)
+      at getRet (http://localhost:3030/__cypress/runner/cypress_runner.js:123004:20)
+      at tryCatcher (http://localhost:3030/__cypress/runner/cypress_runner.js:1777:23)
+      at Promise.attempt.Promise.try (http://localhost:3030/__cypress/runner/cypress_runner.js:4285:29)
+      at Context.thenFn (http://localhost:3030/__cypress/runner/cypress_runner.js:123015:66)
+      at Context.then (http://localhost:3030/__cypress/runner/cypress_runner.js:123266:21)
+
+
+
+
+  (Results)
+
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Tests:        1                                                                                │
+  │ Passing:      0                                                                                │
+  │ Failing:      1                                                                                │
+  │ Pending:      0                                                                                │
+  │ Skipped:      0                                                                                │
+  │ Screenshots:  1                                                                                │
+  │ Video:        false                                                                            │
+  │ Duration:     4 seconds                                                                        │
+  │ Spec Ran:     offline_sync.cy.js                                                               │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+  (Screenshots)
+
+  -  /home/fernandop/Documents/blockchain_thesis_project/cypress/screenshots/offline_     (1280x720)
+     sync.cy.js/Validación de la Estrategia Offline-First (Conectividad Rural) -- Deb               
+     e guardar el payload en IndexedDB cuando está offline y sincronizar al volver on               
+     line (failed).png                                                                              
+
+
+================================================================================
+
+  (Run Finished)
+
+
+       Spec                                              Tests  Passing  Failing  Pending  Skipped  
+  ┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ ✖  offline_sync.cy.js                       00:04        1        -        1        -        - │
+  └────────────────────────────────────────────────────────────────────────────────────────────────┘
+    ✖  1 of 1 failed (100%)                     00:04        1        -        1        -        -  
+

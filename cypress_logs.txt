@@ -1,28 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgTech Portal Privado - Trazabilidad Maíz</title>
-    <link rel="stylesheet" href="./css/portal.css">
-    <!-- Leaflet para Mapas en Tiempo Real -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <!-- Registro del Service Worker en el head para disponibilidad rápida -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // Service Worker en la misma carpeta para el scope correcto
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW registrado', reg.scope))
-                    .catch(err => console.error('Error al registrar SW', err));
-            });
-        }
-    </script>
-</head>
-
-<body>
     <div class="app-container">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
@@ -31,11 +7,11 @@
                 <h1>AgTech Portal</h1>
             </div>
 
-            <div id="connection-status" class="status-indicator online">Estado: Online</div>
+            <div id="connection-status" class="status-indicator offline">Estado: Offline (Modo Campo - Guardando Localmente)</div>
 
-            <div id="user-info-panel" class="user-profile" style="display: none;">
+            <div id="user-info-panel" class="user-profile" style="display: block;">
                 <p>Conectado como</p>
-                <h3 id="current-role">Productor</h3>
+                <h3 id="current-role">Productor Agrícola</h3>
                 <button id="logout-btn" class="btn-logout">Cerrar Sesión</button>
             </div>
             
@@ -54,7 +30,7 @@
             </div>
 
             <!-- Login Institucional -->
-            <div id="login-panel" class="panel">
+            <div id="login-panel" class="panel" style="display: none;">
                 <div class="panel-header">
                     <h2>Ingreso Institucional</h2>
                     <p>Autenticación segura para agentes de la cadena agroindustrial</p>
@@ -63,11 +39,11 @@
                     <form id="login-form">
                         <div class="form-group">
                             <label>Usuario Institucional</label>
-                            <input type="text" id="login-user" placeholder="productor1, senasa_fiscal, etc." required>
+                            <input type="text" id="login-user" placeholder="productor1, senasa_fiscal, etc." required="">
                         </div>
                         <div class="form-group">
                             <label>Contraseña</label>
-                            <input type="password" id="login-pass" required>
+                            <input type="password" id="login-pass" required="">
                         </div>
                         <button type="submit" class="btn-primary">Iniciar Sesión Segura</button>
                     </form>
@@ -75,7 +51,7 @@
             </div>
 
             <!-- Formulario Productor -->
-            <div id="registro-panel" class="panel" style="display: none;">
+            <div id="registro-panel" class="panel" style="display: block;">
                 <div class="panel-header">
                     <h2>1. Registrar Cosecha Primaria</h2>
                     <p>Declare el origen de la cosecha. Soporta operación sin conexión.</p>
@@ -83,11 +59,11 @@
                 <form id="registro-form">
                     <div class="form-group">
                         <label>RENSPA Origen</label>
-                        <input type="text" id="renspa" placeholder="Ej: 01.002.0.00034/00" required>
+                        <input type="text" id="renspa" placeholder="Ej: 01.002.0.00034/00" required="">
                     </div>
                     <div class="form-group">
                         <label>Volumen (Toneladas)</label>
-                        <input type="number" id="volumen" placeholder="Ej: 30" required>
+                        <input type="number" id="volumen" placeholder="Ej: 30" required="">
                     </div>
                     <div class="form-group">
                         <label>Carta de Porte (PDF)</label>
@@ -95,9 +71,9 @@
                     </div>
                     <div class="form-group">
                         <label>ID Lote Autogenerado (Hash SHA-256)</label>
-                        <input type="text" id="idLote" readonly style="background: #1b4332; color: #4ade80; border: 1px solid #2d6a4f; cursor: not-allowed;" placeholder="Se generará al completar los datos...">
+                        <input type="text" id="idLote" readonly="" style="background: #1b4332; color: #4ade80; border: 1px solid #2d6a4f; cursor: not-allowed;" placeholder="Se generará al completar los datos...">
                     </div>
-                    <button type="submit" class="btn-primary" id="btn-registrar">Registrar en Blockchain</button>
+                    <button type="submit" class="btn-primary" id="btn-registrar" data-original-text="Registrar en Blockchain" style="opacity: 1;">Registrar en Blockchain</button>
                 </form>
 
                 <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -112,9 +88,7 @@
                                 <th>Acción</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <!-- Llenado dinámico -->
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -128,7 +102,7 @@
                 <form id="transporte-form">
                     <div class="form-group">
                         <label>ID Lote Asignado</label>
-                        <select id="idLoteTransporte" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
+                        <select id="idLoteTransporte" required="" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
                             <option value="">Cargando lotes disponibles...</option>
                         </select>
                     </div>
@@ -151,17 +125,17 @@
                 <form id="acopio-form">
                     <div class="form-group">
                         <label>Camiones Entrantes (En Tránsito)</label>
-                        <select id="idLoteAcopio" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
+                        <select id="idLoteAcopio" required="" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
                             <option value="">Cargando camiones...</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Pesaje Final (Toneladas)</label>
-                        <input type="number" id="pesajeFinal" placeholder="Ej: 29.5" required step="0.1">
+                        <input type="number" id="pesajeFinal" placeholder="Ej: 29.5" required="" step="0.1">
                     </div>
                     <div class="form-group">
                         <label>Calidad Comercial</label>
-                        <input type="text" id="calidadComercial" placeholder="Ej: Grado 2 - Humedad 14.5%" required>
+                        <input type="text" id="calidadComercial" placeholder="Ej: Grado 2 - Humedad 14.5%" required="">
                     </div>
                     <button type="submit" class="btn-primary" id="btn-acopio" style="background-color: #2a9d8f;">Acondicionar Lote</button>
                 </form>
@@ -203,11 +177,11 @@
                 <form id="exportar-form">
                     <div class="form-group">
                         <label>ID Lote a Exportar</label>
-                        <input type="text" id="idLoteExportar" placeholder="Ej: LOTE-001" required>
+                        <input type="text" id="idLoteExportar" placeholder="Ej: LOTE-001" required="">
                     </div>
                     <div class="form-group">
                         <label>Dirección Wallet Exportador</label>
-                        <input type="text" id="walletExportador" placeholder="0x..." required>
+                        <input type="text" id="walletExportador" placeholder="0x..." required="">
                     </div>
                     <button type="submit" class="btn-primary" style="background-color: #7b1fa2; box-shadow: 0 4px 6px rgba(123, 31, 162, 0.2);">Acuñar NFT y Generar QR Público</button>
                 </form>
@@ -218,7 +192,7 @@
                 <h3>✅ NFT Generado Exitosamente</h3>
                 <p style="color: var(--text-secondary); margin-bottom: 20px;">Escanee el código QR o haga clic en el enlace para verificar la trazabilidad pública.</p>
                 <div class="qr-image-container">
-                    <img id="qr-image" src="" alt="Código QR NFT" style="display: none; max-width: 100%;" />
+                    <img id="qr-image" src="" alt="Código QR NFT" style="display: none; max-width: 100%;">
                 </div>
                 <div>
                     <a id="qr-link" href="#" target="_blank" class="qr-link">Verificar Lote Público</a>
@@ -228,15 +202,24 @@
             <!-- Timeline/Resultados -->
             <div id="resultados" class="log-panel">
                 <h2>Log de Transacciones / Sincronización</h2>
-                <ul id="sync-list" class="sync-list"></ul>
+                <ul id="sync-list" class="sync-list"><li>📦 [OFFLINE] Lote 0x92a949dca573fe07 guardado en cache local. Esperando red...</li></ul>
             </div>
         </main>
     </div>
 
     <!-- Contenedor para Notificaciones Toast -->
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" class="toast-container"><div class="toast success">
+        <span>✅</span>
+        <span>Conexión restaurada. Sincronizando datos...</span>
+    </div><div class="toast warning">
+        <span>⚠️</span>
+        <span>Conexión perdida. Operando en modo Offline-First.</span>
+    </div><div class="toast warning">
+        <span>⚠️</span>
+        <span>Lote 0x92a949dca573fe07 guardado localmente (IndexedDB).</span>
+    </div></div>
 
     <script src="./app.js"></script>
-</body>
 
-</html>
+
+<div id="debug-localstorage">Token: null, Role: null</div><div class="debug-log" style="color: blue; z-index: 9999;">LOG: SW registrado http://localhost:3030/public/</div><div id="debug-localstorage">Token: mock_token, Role: Productor Agrícola</div>
