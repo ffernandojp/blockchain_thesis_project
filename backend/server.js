@@ -9,11 +9,33 @@ const ipfsService = require('./services/ipfsService');
 const jwt = require('jsonwebtoken');
 const pdf = require('pdf-parse');
 
+/**
+ * @typedef {Object} LoteMaiz
+ * @property {string} id - ID único del lote.
+ * @property {string} renspa - RENSPA del origen.
+ * @property {string} geolocalizacion - Coordenadas de origen o acopio.
+ * @property {number} volumenToneladas - Peso en toneladas.
+ * @property {string} estado - Estado actual (COSECHADO, EN_TRANSITO, ACONDICIONADO, BLOQUEADO, etc).
+ * @property {string|null} ipfsCID - CID del documento en IPFS.
+ * @property {string|null} bfaHash - Hash notarial en BFA.
+ * @property {Array} historialTransacciones - Trazabilidad de estados.
+ */
+
+/**
+ * @typedef {Object} UsuarioSistema
+ * @property {string} username - Nombre de usuario.
+ * @property {string} password - Contraseña (simulada).
+ * @property {string} rol - Rol dentro del sistema.
+ * @property {string} [renspa] - RENSPA asociado (solo Productor).
+ */
+
 const JWT_SECRET = 'tesina_secreto_123';
 
+/** @type {UsuarioSistema[]} */
 const USUARIOS = [
   { username: 'productor1', password: '123', rol: 'Productor Agrícola', renspa: '01.002.0.00345/00' },
   { username: 'acopio_coop', password: '123', rol: 'Acopiador / Cooperativa' },
+  { username: 'transporte_log', password: '123', rol: 'Transportista' },
   { username: 'senasa_fiscal', password: '123', rol: 'Organismo de Control (SENASA/AFIP)' },
   { username: 'exportador_bb', password: '123', rol: 'Exportador (Puertos)' }
 ];
@@ -104,25 +126,94 @@ app.post('/api/lotes/registrar', verificarRol(['Productor Agrícola']), upload.s
   }
 });
 
+
+
 /**
- * GET /api/lotes/:id (Consulta Pública - Verificador QR)
- * Devuelve la traza completa del lote.
+ * Endpoints Listados (RBAC)
  */
-app.get('/api/lotes/:id', (req, res) => {
+
+app.get('/api/lotes/mis-lotes', verificarRol(['Productor Agrícola']), (req, res) => {
   try {
-    const { id } = req.params;
-    const lote = fabricLedger.obtenerLote(id);
+    const lotes = fabricLedger.obtenerLotesPorRenspa(req.user.renspa);
+    res.json({ success: true, data: lotes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
-    if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
+app.get('/api/lotes/entrantes', verificarRol(['Acopiador / Cooperativa']), (req, res) => {
+  try {
+    const lotes = fabricLedger.obtenerLotesPorEstado('EN_TRANSITO');
+    res.json({ success: true, data: lotes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
-    res.json({ success: true, data: lote });
+app.get('/api/lotes/transportes-disponibles', verificarRol(['Transportista']), (req, res) => {
+  try {
+    const lotes = fabricLedger.obtenerLotesPorEstado('COSECHADO');
+    res.json({ success: true, data: lotes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/lotes/buscar', verificarRol(['Organismo de Control (SENASA/AFIP)']), (req, res) => {
+  try {
+    const query = req.query.q || '';
+    if (!query) {
+      return res.json({ success: true, data: fabricLedger.obtenerTodosLotes() });
+    }
+    const match = fabricLedger.obtenerTodosLotes().filter(l => 
+      l.id.includes(query) || (l.renspa && l.renspa.includes(query))
+    );
+    res.json({ success: true, data: match });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 /**
- * 2. POST /api/lotes/notarizar (SENASA/AFIP)
+ * 2. POST /api/lotes/transporte (Transportista)
+ * Actualiza estado a "En Tránsito".
+ */
+app.post('/api/lotes/transporte', verificarRol(['Transportista']), async (req, res) => {
+  try {
+    const { idLote } = req.body;
+    const lote = fabricLedger.obtenerLote(idLote);
+    
+    if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
+    if (lote.estado !== 'COSECHADO') return res.status(400).json({ success: false, error: "El lote debe estar cosechado para iniciar transporte." });
+
+    const loteActualizado = fabricLedger.actualizarEstadoLogistico(idLote, 'EN_TRANSITO', req.user.rol, 'Carga recibida y en camino.');
+    res.json({ success: true, data: loteActualizado });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * 3. POST /api/lotes/acopio (Acopiador / Cooperativa)
+ * Acondicionamiento y pesaje.
+ */
+app.post('/api/lotes/acopio', verificarRol(['Acopiador / Cooperativa']), async (req, res) => {
+  try {
+    const { idLote, pesajeFinal, calidad } = req.body;
+    const lote = fabricLedger.obtenerLote(idLote);
+    
+    if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
+    if (lote.estado !== 'EN_TRANSITO') return res.status(400).json({ success: false, error: "El lote no está en tránsito." });
+
+    const loteActualizado = fabricLedger.actualizarEstadoLogistico(idLote, 'ACONDICIONADO', req.user.rol, `Pesaje: ${pesajeFinal}TN. Calidad: ${calidad}`);
+    res.json({ success: true, data: loteActualizado });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * 4. POST /api/lotes/notarizar (SENASA/AFIP)
  * Simula sellado en Blockchain Federal Argentina (BFA).
  */
 app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/AFIP)']), async (req, res) => {
@@ -138,25 +229,35 @@ app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/AFI
 
     // Simular latencia de BFA y actualización asíncrona
     setTimeout(() => {
-      fabricLedger.actualizarEstadoLogistico(
-        idLote,
-        'VERIFICADO_BFA',
-        'SENASA/AFIP',
-        'Sellado criptográfico en BFA exitoso',
-        bfaHash
-      );
-      console.log(`✅ [BFA] Lote ${idLote} notarizado. Hash: ${bfaHash}`);
-    }, 2000); // 2 segundos de latencia simulada
+      fabricLedger.actualizarEstadoLogistico(idLote, lote.estado, req.user.rol, 'Sello criptográfico emitido en BFA.', bfaHash);
+    }, 2000);
 
-    res.json({ success: true, message: "Proceso de notarización en BFA iniciado asíncronamente." });
+    res.json({ success: true, message: 'Notarización BFA iniciada asíncronamente.' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 /**
- * 3. POST /api/lotes/exportar (Exportador)
- * Acuña el NFT en la blockchain pública local (Hardhat) y genera QR info.
+ * 5. POST /api/lotes/bloquear (Regulador)
+ * Emitir Alerta Fitosanitaria y bloquear lote.
+ */
+app.post('/api/lotes/bloquear', verificarRol(['Organismo de Control (SENASA/AFIP)']), async (req, res) => {
+  try {
+    const { idLote, motivo } = req.body;
+    const lote = fabricLedger.obtenerLote(idLote);
+    if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
+    
+    const loteActualizado = fabricLedger.actualizarEstadoLogistico(idLote, 'BLOQUEADO', req.user.rol, `ALERTA FITOSANITARIA: ${motivo}`);
+    res.json({ success: true, data: loteActualizado });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * 6. POST /api/lotes/exportar (Exportador / Puerto)
+ * Emite un NFT de exportación en Polygon conectando con el smart contract.
  */
 app.post('/api/lotes/exportar', verificarRol(['Exportador (Puertos)']), async (req, res) => {
   try {
@@ -202,6 +303,22 @@ app.post('/api/lotes/exportar', verificarRol(['Exportador (Puertos)']), async (r
   } catch (error) {
     console.error("Error detallado al exportar:", error);
     res.status(500).json({ success: false, error: `Fallo al exportar: ${error.reason || error.message}` });
+  }
+});
+/**
+ * GET /api/lotes/:id (Consulta Pública - Verificador QR)
+ * Devuelve la traza completa del lote.
+ */
+app.get('/api/lotes/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const lote = fabricLedger.obtenerLote(id);
+
+    if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
+
+    res.json({ success: true, data: lote });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

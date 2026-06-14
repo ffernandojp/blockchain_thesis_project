@@ -3,160 +3,43 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BFA - Verificador Público de Trazabilidad</title>
-    <style>
-        :root {
-            --bfa-primary: #004b87;
-            --bfa-secondary: #00a0df;
-            --bfa-bg: #f8f9fa;
-            --text: #333;
-        }
-
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bfa-bg);
-            color: var(--text);
-            margin: 0;
-            padding: 0;
-        }
-
-        header {
-            background-color: var(--bfa-primary);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 40px auto;
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        h2 {
-            color: var(--bfa-primary);
-            border-bottom: 2px solid var(--bfa-secondary);
-            padding-bottom: 10px;
-        }
-
-        .timeline {
-            position: relative;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .timeline::after {
-            content: '';
-            position: absolute;
-            width: 4px;
-            background-color: #dee2e6;
-            top: 0;
-            bottom: 0;
-            left: 20px;
-            margin-left: -2px;
-        }
-
-        .timeline-item {
-            padding: 10px 40px;
-            position: relative;
-            background-color: inherit;
-            width: calc(100% - 80px);
-        }
-
-        .timeline-item::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            right: auto;
-            background-color: white;
-            border: 4px solid var(--bfa-secondary);
-            top: 15px;
-            left: 10px;
-            border-radius: 50%;
-            z-index: 1;
-        }
-
-        .content {
-            padding: 20px;
-            background-color: #f8f9fa;
-            position: relative;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-        }
-
-        .content h3 {
-            margin-top: 0;
-            color: var(--bfa-primary);
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 0.85em;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .badge.bfa { background: #e3f2fd; color: #1565c0; }
-        .badge.ipfs { background: #e0f2f1; color: #00695c; }
-        .badge.polygon { background: #f3e5f5; color: #6a1b9a; }
-        
-        .hash {
-            font-family: monospace;
-            word-break: break-all;
-            background: #eee;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-
-        .loader {
-            text-align: center;
-            font-size: 1.2em;
-            color: #666;
-            padding: 50px;
-        }
-
-        .error {
-            color: #d32f2f;
-            text-align: center;
-            padding: 20px;
-            background: #ffebee;
-            border-radius: 4px;
-        }
-
-        a {
-            color: var(--bfa-secondary);
-            text-decoration: none;
-        }
-        
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <link rel="stylesheet" href="./css/verificador.css">
 </head>
 
 <body>
-    <header>
-        <h1>BFA - Consulta Pública Inmutable</h1>
-        <p>Trazabilidad Blockchain Garantizada</p>
+    <header class="verifier-header">
+        <h1>Trazabilidad Garantizada</h1>
+        <p>Consulte el origen y recorrido de su producto</p>
+        <div class="badge-trust">
+            <span>🛡️</span> Asegurado por Blockchain
+        </div>
     </header>
 
     <div class="container" id="main-container">
-        <div id="loader" class="loader">Buscando registros criptográficos...</div>
-        <div id="content" style="display: none;">
-            <h2 id="lote-title">Lote: </h2>
-            <div class="timeline" id="timeline">
-                <!-- Se llenará dinámicamente -->
+        <div class="card">
+            <div id="loader" class="loader-container">
+                <div class="spinner"></div>
+                <div class="loader-text">Buscando registros criptográficos...</div>
+            </div>
+
+            <div id="content" style="display: none;">
+                <div class="lote-header">
+                    <h2>Identificador de Lote</h2>
+                    <div id="lote-title" class="lote-id"></div>
+                </div>
+                
+                <div class="timeline" id="timeline">
+                    <!-- Dynamic Content From JS -->
+                </div>
             </div>
         </div>
+        
+        <footer class="verifier-footer">
+            <p>Datos inmutables en BFA y Polygon Networks</p>
+            <p>AgTech Trazabilidad 2026</p>
+        </footer>
     </div>
 
     <script src="./verificador.js"></script>

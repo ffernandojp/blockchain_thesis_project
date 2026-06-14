@@ -1,15 +1,18 @@
 // sw.js - Service Worker
 // Maneja el caché de los estáticos para permitir la carga offline.
 
-const CACHE_NAME = 'agtech-v1';
+const CACHE_NAME = 'agtech-v7';
 const ASSETS = [
     './',
-    './index.html',
-    './app.js'
+    './app.js',
+    './verificador.js',
+    './css/portal.css',
+    './css/verificador.css'
 ];
 
 // Instalación: Guardar archivos iniciales
 self.addEventListener('install', event => {
+    self.skipWaiting(); // Fuerza a que el SW se active inmediatamente
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             console.log('[Service Worker] Cacheando assets');
@@ -18,7 +21,7 @@ self.addEventListener('install', event => {
     );
 });
 
-// Fetch: Retornar caché si estamos offline
+// Fetch: Estrategia Network-First (Intenta red, si falla usa caché)
 self.addEventListener('fetch', event => {
     // Si la request es de nuestro backend Node (API), no cacheamos
     if (event.request.url.includes('/api/')) {
@@ -26,11 +29,16 @@ self.addEventListener('fetch', event => {
     }
 
     event.respondWith(
-        caches.match(event.request).then(cachedResponse => {
-            // Devuelve del cache, o en su defecto hace fetch
-            return cachedResponse || fetch(event.request).catch(() => {
-                console.log('[Service Worker] No hay red y recurso no cacheado:', event.request.url);
+        fetch(event.request).then(networkResponse => {
+            // Guardar copia fresca en caché para cuando estemos offline
+            return caches.open(CACHE_NAME).then(cache => {
+                cache.put(event.request, networkResponse.clone());
+                return networkResponse;
             });
+        }).catch(() => {
+            // Si no hay red, servir desde caché
+            console.log('[Service Worker] Offline: Sirviendo desde caché', event.request.url);
+            return caches.match(event.request);
         })
     );
 });
@@ -45,6 +53,6 @@ self.addEventListener('activate', event => {
                     return caches.delete(key);
                 }
             })
-        ))
+        )).then(() => self.clients.claim()) // Tomar control de todos los clientes de inmediato
     );
 });
