@@ -134,8 +134,29 @@
         <!-- Panel Offline-First -->
         <div id="connection-status" class="status-bar online">Estado: Online</div>
 
+        <!-- Login Institucional -->
+        <div id="login-panel" style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #1565c0; margin-top: 0;">Ingreso Institucional</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label>Usuario Institucional:</label>
+                    <input type="text" id="login-user" placeholder="productor1, senasa_fiscal, etc." required>
+                </div>
+                <div class="form-group">
+                    <label>Contraseña:</label>
+                    <input type="password" id="login-pass" required>
+                </div>
+                <button type="submit" style="background-color: #1565c0;">Iniciar Sesión Segura</button>
+            </form>
+        </div>
+
+        <div id="user-info-panel" style="display: none; background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+            <p style="margin: 0; font-weight: bold; color: #2e7d32;">Autenticado como: <span id="current-role"></span></p>
+            <button id="logout-btn" style="background-color: #d32f2f; width: auto; padding: 5px 15px; margin-top: 10px;">Cerrar Sesión</button>
+        </div>
+
         <!-- Formulario Productor -->
-        <div id="registro-panel">
+        <div id="registro-panel" style="display: none;">
             <h2>1. Registrar Cosecha Primaria</h2>
             <form id="registro-form">
                 <div class="form-group">
@@ -158,7 +179,7 @@
             </form>
         </div>
 
-        <div id="notarizar-panel" style="margin-top: 20px;">
+        <div id="notarizar-panel" style="margin-top: 20px; display: none;">
             <h2>2. Notarizar BFA (SENASA/AFIP)</h2>
             <form id="notarizar-form">
                 <div class="form-group">
@@ -169,7 +190,7 @@
             </form>
         </div>
 
-        <div id="exportar-panel" style="margin-top: 20px;">
+        <div id="exportar-panel" style="margin-top: 20px; display: none;">
             <h2>3. Cierre Logístico (Exportador)</h2>
             <form id="exportar-form">
                 <div class="form-group">
