@@ -127,10 +127,11 @@
                 </div>
                 <form id="transporte-form">
                     <div class="form-group">
-                        <label>ID Lote Asignado</label>
-                        <select id="idLoteTransporte" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
-                            <option value="">Cargando lotes disponibles...</option>
-                        </select>
+                        <label>Lotes Cosechados Disponibles (Seleccione uno)</label>
+                        <div id="listaLotesTransporte" class="interactive-lot-list">
+                            <p style="color: var(--text-secondary); text-align: center; padding: 20px;">Cargando lotes disponibles...</p>
+                        </div>
+                        <input type="hidden" id="idLoteTransporte" required>
                     </div>
                     <div class="form-group" style="text-align: center;">
                         <label>Ruta Asignada (GPS Tracking)</label>
@@ -150,10 +151,11 @@
                 </div>
                 <form id="acopio-form">
                     <div class="form-group">
-                        <label>Camiones Entrantes (En Tránsito)</label>
-                        <select id="idLoteAcopio" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
-                            <option value="">Cargando camiones...</option>
-                        </select>
+                        <label>Camiones Entrantes (En Tránsito - Seleccione uno)</label>
+                        <div id="listaLotesAcopio" class="interactive-lot-list">
+                            <p style="color: var(--text-secondary); text-align: center; padding: 20px;">Cargando camiones...</p>
+                        </div>
+                        <input type="hidden" id="idLoteAcopio" required>
                     </div>
                     <div class="form-group">
                         <label>Pesaje Final (Toneladas)</label>
