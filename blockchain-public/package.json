@@ -1,0 +1,7 @@
+{
+  "name": "blockchain-public",
+  "type": "module",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2"
+  }
+}

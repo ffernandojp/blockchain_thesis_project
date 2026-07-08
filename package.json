@@ -1,0 +1,38 @@
+{
+  "name": "blockchain_thesis_project",
+  "version": "1.0.0",
+  "description": "Prototipo completo de Arquitectura Blockchain Híbrida orientada a la cadena de suministro agroindustrial (AgTech). El sistema integra trazabilidad local, registro documental descentralizado y tokenización de lotes de exportación.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffernandojp/blockchain_thesis_project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ffernandojp/blockchain_thesis_project/issues"
+  },
+  "homepage": "https://github.com/ffernandojp/blockchain_thesis_project#readme",
+  "dependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "@openzeppelin/contracts": "^5.6.1",
+    "axios": "^1.16.1",
+    "cors": "^2.8.6",
+    "ethers": "^6.16.0",
+    "express": "^5.2.1",
+    "form-data": "^4.0.5",
+    "hardhat": "^3.7.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "pdf-parse": "^1.1.1",
+    "pdfkit": "^0.19.1"
+  },
+  "devDependencies": {
+    "cypress": "^15.17.0"
+  }
+}

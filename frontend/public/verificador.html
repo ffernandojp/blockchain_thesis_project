@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BFA - Verificador Público de Trazabilidad</title>
+    <link rel="stylesheet" href="./css/verificador.css">
+</head>
+
+<body>
+    <header class="verifier-header">
+        <h1>Trazabilidad Garantizada</h1>
+        <p>Consulte el origen y recorrido de su producto</p>
+        <div class="badge-trust">
+            <span>🛡️</span> Asegurado por Blockchain
+        </div>
+    </header>
+
+    <div class="container" id="main-container">
+        <div class="card">
+            <div id="loader" class="loader-container">
+                <div class="spinner"></div>
+                <div class="loader-text">Buscando registros criptográficos...</div>
+            </div>
+
+            <div id="content" style="display: none;">
+                <div class="lote-header">
+                    <h2>Identificador de Lote</h2>
+                    <div id="lote-title" class="lote-id"></div>
+                    
+                    <!-- Contenedor del QR de Trazabilidad -->
+                    <div id="qr-container" style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; justify-content: center;">
+                        <img id="qr-image" src="" alt="Código QR de Verificación" style="width: 140px; height: 140px; border: 4px solid #ffffff; box-shadow: var(--shadow-soft); border-radius: 8px; background: #ffffff;" />
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">Código QR de Trazabilidad</span>
+                    </div>
+                </div>
+                
+                <div class="timeline" id="timeline">
+                    <!-- Dynamic Content From JS -->
+                </div>
+            </div>
+        </div>
+        
+        <footer class="verifier-footer">
+            <p>Datos inmutables en BFA y Polygon Networks</p>
+            <p>AgTech Trazabilidad 2026</p>
+        </footer>
+    </div>
+
+    <script src="./verificador.js"></script>
+</body>
+
+</html>

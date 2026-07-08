@@ -1,0 +1,225 @@
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span class="icon">🌾</span>
+                <h1>AgTech Portal</h1>
+            </div>
+
+            <div id="connection-status" class="status-indicator offline">Estado: Offline (Modo Campo - Guardando Localmente)</div>
+
+            <div id="user-info-panel" class="user-profile" style="display: block;">
+                <p>Conectado como</p>
+                <h3 id="current-role">Productor Agrícola</h3>
+                <button id="logout-btn" class="btn-logout">Cerrar Sesión</button>
+            </div>
+            
+            <div style="flex: 1;"></div>
+            
+            <div class="sidebar-footer" style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">
+                <p>Plataforma basada en Blockchain</p>
+                <p>Offline-First Enabled</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div class="top-bar">
+                <h2>Tablero de Trazabilidad</h2>
+            </div>
+
+            <!-- Login Institucional -->
+            <div id="login-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>Ingreso Institucional</h2>
+                    <p>Autenticación segura para agentes de la cadena agroindustrial</p>
+                </div>
+                <div class="login-wrapper">
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label>Usuario Institucional</label>
+                            <input type="text" id="login-user" placeholder="productor1, senasa_fiscal, etc." required="">
+                        </div>
+                        <div class="form-group">
+                            <label>Contraseña</label>
+                            <input type="password" id="login-pass" required="">
+                        </div>
+                        <button type="submit" class="btn-primary">Iniciar Sesión Segura</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Formulario Productor -->
+            <div id="registro-panel" class="panel" style="display: block;">
+                <div class="panel-header">
+                    <h2>1. Registrar Cosecha Primaria</h2>
+                    <p>Declare el origen de la cosecha. Soporta operación sin conexión.</p>
+                </div>
+                <form id="registro-form">
+                    <div class="form-group">
+                        <label>RENSPA Origen</label>
+                        <input type="text" id="renspa" placeholder="Ej: 01.002.0.00034/00" required="">
+                    </div>
+                    <div class="form-group">
+                        <label>Volumen (Toneladas)</label>
+                        <input type="number" id="volumen" placeholder="Ej: 30" required="">
+                    </div>
+                    <div class="form-group">
+                        <label>Carta de Porte (PDF)</label>
+                        <input type="file" id="documento" accept="application/pdf">
+                    </div>
+                    <div class="form-group">
+                        <label>ID Lote Autogenerado (Hash SHA-256)</label>
+                        <input type="text" id="idLote" readonly="" style="background: #1b4332; color: #4ade80; border: 1px solid #2d6a4f; cursor: not-allowed;" placeholder="Se generará al completar los datos...">
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-registrar" data-original-text="Registrar en Blockchain" style="opacity: 1;">Registrar en Blockchain</button>
+                </form>
+
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h3>Mis Lotes Activos</h3>
+                <div class="table-container" style="overflow-x: auto;">
+                    <table class="data-table" id="tabla-lotes-productor" style="width: 100%; text-align: left; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #2d6a4f;">
+                                <th>ID Lote</th>
+                                <th>Volumen</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Formulario Transportista -->
+            <div id="transporte-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>2. Registrar Recepción y Transporte</h2>
+                    <p>Firma digital de recepción de carga. Actualiza estado a "En Tránsito".</p>
+                </div>
+                <form id="transporte-form">
+                    <div class="form-group">
+                        <label>ID Lote Asignado</label>
+                        <select id="idLoteTransporte" required="" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
+                            <option value="">Cargando lotes disponibles...</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="text-align: center;">
+                        <label>Ruta Asignada (GPS Tracking)</label>
+                        <div id="mapa-transporte" style="background: #1b4332; border: 1px solid #2d6a4f; height: 200px; border-radius: 8px; overflow: hidden; position: relative;">
+                            <div id="map-placeholder" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #4ade80;">📍 Obteniendo GPS...</div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-transporte" style="background-color: #fca311; color: #081c15;">Iniciar Tránsito (Firma Digital)</button>
+                </form>
+            </div>
+
+            <!-- Formulario Acopiador -->
+            <div id="acopio-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>3. Recepción en Acopio / Puerto</h2>
+                    <p>Registro de pesaje final y parámetros de calidad comercial.</p>
+                </div>
+                <form id="acopio-form">
+                    <div class="form-group">
+                        <label>Camiones Entrantes (En Tránsito)</label>
+                        <select id="idLoteAcopio" required="" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #2d6a4f; background: #081c15; color: white;">
+                            <option value="">Cargando camiones...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Pesaje Final (Toneladas)</label>
+                        <input type="number" id="pesajeFinal" placeholder="Ej: 29.5" required="" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Calidad Comercial</label>
+                        <input type="text" id="calidadComercial" placeholder="Ej: Grado 2 - Humedad 14.5%" required="">
+                    </div>
+                    <button type="submit" class="btn-primary" id="btn-acopio" style="background-color: #2a9d8f;">Acondicionar Lote</button>
+                </form>
+            </div>
+
+            <!-- Notarizar SENASA -->
+            <div id="notarizar-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>4. Consola de Auditoría Estatal</h2>
+                    <p>Búsqueda global y acciones regulatorias sobre los lotes.</p>
+                </div>
+                
+                <div class="form-group" style="display: flex; gap: 10px;">
+                    <input type="search" id="input-busqueda-senasa" placeholder="Buscar por Lote o CUIT/RENSPA..." style="flex: 1;">
+                    <button type="button" class="btn-primary" id="btn-buscar-senasa" style="width: auto; background-color: #0ea5e9;">Buscar</button>
+                </div>
+
+                <div id="resultados-busqueda-senasa" style="margin-bottom: 20px;">
+                    <!-- Llenado dinámico -->
+                </div>
+
+                <form id="notarizar-form" style="display: none; padding: 15px; border: 1px solid #2d6a4f; border-radius: 8px; margin-bottom: 15px;">
+                    <h4>Acciones sobre Lote Seleccionado: <span id="lote-seleccionado-senasa"></span></h4>
+                    <input type="hidden" id="idLoteNotarizar">
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button type="submit" class="btn-primary" id="btn-notarizar" style="background-color: #0ea5e9; flex: 1;">Emitir Sello BFA</button>
+                        <button type="button" class="btn-primary" id="btn-bloquear" style="background-color: #dc2626; flex: 1;">Bloqueo Fitosanitario</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Exportar -->
+            <div id="exportar-panel" class="panel" style="display: none;">
+                <div class="panel-header">
+                    <h2>3. Cierre Logístico (Exportador)</h2>
+                    <p>Acuñe el NFT representativo y genere el QR para el consumidor final.</p>
+                </div>
+                <form id="exportar-form">
+                    <div class="form-group">
+                        <label>ID Lote a Exportar</label>
+                        <input type="text" id="idLoteExportar" placeholder="Ej: LOTE-001" required="">
+                    </div>
+                    <div class="form-group">
+                        <label>Dirección Wallet Exportador</label>
+                        <input type="text" id="walletExportador" placeholder="0x..." required="">
+                    </div>
+                    <button type="submit" class="btn-primary" style="background-color: #7b1fa2; box-shadow: 0 4px 6px rgba(123, 31, 162, 0.2);">Acuñar NFT y Generar QR Público</button>
+                </form>
+            </div>
+
+            <!-- Resultado QR -->
+            <div id="qr-result-panel" class="panel qr-panel" style="display: none;">
+                <h3>✅ NFT Generado Exitosamente</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Escanee el código QR o haga clic en el enlace para verificar la trazabilidad pública.</p>
+                <div class="qr-image-container">
+                    <img id="qr-image" src="" alt="Código QR NFT" style="display: none; max-width: 100%;">
+                </div>
+                <div>
+                    <a id="qr-link" href="#" target="_blank" class="qr-link">Verificar Lote Público</a>
+                </div>
+            </div>
+
+            <!-- Timeline/Resultados -->
+            <div id="resultados" class="log-panel">
+                <h2>Log de Transacciones / Sincronización</h2>
+                <ul id="sync-list" class="sync-list"><li>📦 [OFFLINE] Lote 0x92a949dca573fe07 guardado en cache local. Esperando red...</li></ul>
+            </div>
+        </main>
+    </div>
+
+    <!-- Contenedor para Notificaciones Toast -->
+    <div id="toast-container" class="toast-container"><div class="toast success">
+        <span>✅</span>
+        <span>Conexión restaurada. Sincronizando datos...</span>
+    </div><div class="toast warning">
+        <span>⚠️</span>
+        <span>Conexión perdida. Operando en modo Offline-First.</span>
+    </div><div class="toast warning">
+        <span>⚠️</span>
+        <span>Lote 0x92a949dca573fe07 guardado localmente (IndexedDB).</span>
+    </div></div>
+
+    <script src="./app.js"></script>
+
+
+<div id="debug-localstorage">Token: null, Role: null</div><div class="debug-log" style="color: blue; z-index: 9999;">LOG: SW registrado http://localhost:3030/public/</div><div id="debug-localstorage">Token: mock_token, Role: Productor Agrícola</div>
