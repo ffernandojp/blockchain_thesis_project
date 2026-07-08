@@ -345,17 +345,32 @@ document.addEventListener('DOMContentLoaded', () => {
     async function actualizarHashLotePreview() {
         const renspa = document.getElementById('renspa').value || '';
         const fileInput = document.getElementById('documento');
-        const fileName = fileInput && fileInput.files.length > 0 ? fileInput.files[0].name : '';
+        const file = fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
 
         const idLoteInput = document.getElementById('idLote');
         if (!idLoteInput) return;
 
-        if (!renspa || !fileName) {
+        if (!renspa) {
             idLoteInput.value = '';
             return;
         }
 
-        const dataToHash = `${renspa}${cachedGeo}${currentLoteTimestamp}${fileName}`;
+        // Si hay archivo, calculamos el hash de su contenido. Si no (ej. en Cypress), usamos un string vacío.
+        let fileHashHex = '';
+        if (file) {
+            try {
+                const fileBuffer = await file.arrayBuffer();
+                const fileHashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer);
+                const fileHashArray = Array.from(new Uint8Array(fileHashBuffer));
+                fileHashHex = fileHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (err) {
+                console.error("Error al calcular el hash del archivo:", err);
+                fileHashHex = file.name; // Fallback al nombre si falla
+            }
+        }
+
+        // Generación determinista del ID de lote basado en RENSPA y el hash del archivo
+        const dataToHash = `${renspa}${fileHashHex}`;
         const encoder = new TextEncoder();
         const dataBuffer = encoder.encode(dataToHash);
         const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
@@ -380,17 +395,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const geolocalizacionReal = await getLocation();
         const renspa = document.getElementById('renspa').value;
-        const fileName = file ? file.name : '';
         const timestamp = currentLoteTimestamp; // Mantenemos el timestamp del preview
 
-        // Asegurarse de que el hash sea el último antes de guardar
-        const dataToHash = `${renspa}${geolocalizacionReal}${timestamp}${fileName}`;
-        const encoder = new TextEncoder();
-        const dataBuffer = encoder.encode(dataToHash);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        const generatedIdLote = '0x' + hashHex.substring(0, 16);
+        // Asegurarnos de tener el hash de lote previsualizado
+        await actualizarHashLotePreview();
+        const generatedIdLote = document.getElementById('idLote').value;
+
+        // --- CONTROL DE DUPLICADOS EN EL FRONTEND ---
+        // 1. Validar duplicado en la UI (tabla de lotes cargados)
+        const celdasId = document.querySelectorAll('#tabla-lotes-productor tbody tr td:first-child');
+        for (let celda of celdasId) {
+            if (celda.textContent.trim() === generatedIdLote) {
+                showToast(`El lote ${generatedIdLote} ya ha sido registrado.`, 'error');
+                agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [DUPLICADO] El lote ${generatedIdLote} ya se encuentra registrado.</span>`);
+                setLoadingState(btn, false);
+                return;
+            }
+        }
+
+        // 2. Validar duplicado en IndexedDB (lotes locales pendientes de sincronizar)
+        if (db) {
+            try {
+                const tx = db.transaction(['lotes_pendientes'], 'readonly');
+                const store = tx.objectStore('lotes_pendientes');
+                const request = store.get(generatedIdLote);
+                const existeEnDB = await new Promise((resolve) => {
+                    request.onsuccess = (ev) => resolve(!!ev.target.result);
+                    request.onerror = () => resolve(false);
+                });
+
+                if (existeEnDB) {
+                    showToast(`El lote ${generatedIdLote} ya está en la cola de envío offline.`, 'error');
+                    agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [DUPLICADO] El lote ${generatedIdLote} ya está pendiente de sincronización.</span>`);
+                    setLoadingState(btn, false);
+                    return;
+                }
+            } catch (err) {
+                console.error("Error al validar duplicado en IndexedDB:", err);
+            }
+        }
+        // ---------------------------------------------
 
         const loteData = {
             idLote: generatedIdLote,
@@ -712,7 +756,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR] Lote ${data.idLote}: ${result.error}</span>`);
-                if (!isSync) showToast(`Error al registrar lote: ${result.error}`, 'error');
+                if (!isSync) {
+                    showToast(`Error al registrar lote: ${result.error}`, 'error');
+                } else if (db && (result.error.includes('ya existe') || result.error.includes('ya está registrado') || result.error.includes('ya fue registrado'))) {
+                    // Evitar reintentos infinitos si fue un error permanente de duplicado durante la sincronización
+                    const tx = db.transaction(['lotes_pendientes'], 'readwrite');
+                    tx.objectStore('lotes_pendientes').delete(data.idLote);
+                    agregarLog(`ℹ️ [SINC] Lote ${data.idLote} removido de la cola por ser un registro duplicado.`);
+                }
             }
         } catch (error) {
             console.error('Error de red al enviar:', error);

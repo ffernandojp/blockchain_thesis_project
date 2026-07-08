@@ -15,6 +15,12 @@ class FabricMockLedger {
       throw new Error(`El lote ${idLote} ya existe en el ledger.`);
     }
 
+    // Control para no ingresar el mismo documento (lote) dos veces
+    const loteExistente = Array.from(this.worldState.values()).find(lote => lote.ipfsCID === ipfsCID);
+    if (loteExistente) {
+      throw new Error(`El documento de este lote (Carta de Porte) ya fue registrado previamente (Lote ID: ${loteExistente.id}).`);
+    }
+
     const nuevoLote = {
       id: idLote,
       renspa: renspa,

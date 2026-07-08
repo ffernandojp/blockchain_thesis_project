@@ -78,8 +78,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const volumenToneladas = document.getElementById('volumen').value;
             const fileName = "offline_document.pdf"; 
 
-            // Hash SHA-256
-            const dataToHash = `${renspa}${geolocalizacion}${timestamp}${fileName}`;
+            // Hash SHA-256 (generación determinista para evitar duplicados)
+            const dataToHash = `${renspa}${fileName}`;
             const encoder = new TextEncoder();
             const dataBuffer = encoder.encode(dataToHash);
             const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
