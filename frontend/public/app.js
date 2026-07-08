@@ -1,10 +1,10 @@
 // app.js - Lógica Frontend Offline-First con IndexedDB y JWT Auth
 
 // Utilidades UI
-window.showToast = function(message, type = 'success') {
+window.showToast = function (message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
-    
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.innerHTML = `
@@ -12,14 +12,14 @@ window.showToast = function(message, type = 'success') {
         <span>${message}</span>
     `;
     container.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.classList.add('fade-out');
         setTimeout(() => toast.remove(), 300);
     }, 4000);
 };
 
-window.evaluarPantalla = function() {
+window.evaluarPantalla = function () {
     // Obtenemos los paneles dinámicamente para evitar problemas de timing
     const loginPanel = document.getElementById('login-panel');
     const userInfoPanel = document.getElementById('user-info-panel');
@@ -31,7 +31,7 @@ window.evaluarPantalla = function() {
     const currentRoleSpan = document.getElementById('current-role');
 
     const urlParams = new URLSearchParams(window.location.search);
-    
+
     if (urlParams.get('mockLogin') === 'productor') {
         localStorage.setItem('agtech_token', 'mock_token');
         localStorage.setItem('agtech_role', 'Productor Agrícola');
@@ -40,11 +40,7 @@ window.evaluarPantalla = function() {
     const token = localStorage.getItem('agtech_token');
     const role = localStorage.getItem('agtech_role');
 
-    // DEBUG DIVS PARA CYPRESS
-    const debugDiv = document.createElement('div');
-    debugDiv.id = "debug-localstorage";
-    debugDiv.innerText = `Token: ${token}, Role: ${role}`;
-    if (document.body) document.body.appendChild(debugDiv);
+
 
     if (!token) {
         if (loginPanel) loginPanel.style.display = 'block';
@@ -58,79 +54,50 @@ window.evaluarPantalla = function() {
         if (loginPanel) loginPanel.style.display = 'none';
         if (userInfoPanel) userInfoPanel.style.display = 'block';
         if (currentRoleSpan) currentRoleSpan.textContent = role;
-        
+
         if (registroPanel) registroPanel.style.display = role === 'Productor Agrícola' ? 'block' : 'none';
         if (transportePanel) transportePanel.style.display = role === 'Transportista' ? 'block' : 'none';
         if (acopioPanel) acopioPanel.style.display = role === 'Acopiador / Cooperativa' ? 'block' : 'none';
-        if (notarizarPanel) notarizarPanel.style.display = role === 'Organismo de Control (SENASA/AFIP)' ? 'block' : 'none';
+        if (notarizarPanel) notarizarPanel.style.display = role === 'Organismo de Control (SENASA/ARCA)' ? 'block' : 'none';
         if (exportarPanel) exportarPanel.style.display = role === 'Exportador (Puertos)' ? 'block' : 'none';
 
-        if (typeof cargarDatosIniciales === 'function') {
-            cargarDatosIniciales(role);
+        if (typeof window.cargarDatosIniciales === 'function') {
+            window.cargarDatosIniciales(role);
         }
 
-        if (role === 'Transportista' && typeof initTransportMap === 'function') {
-            setTimeout(initTransportMap, 300); // Dar tiempo a que el panel sea visible
+        if (role === 'Transportista' && typeof window.initTransportMap === 'function') {
+            setTimeout(window.initTransportMap, 300); // Dar tiempo a que el panel sea visible
         }
     }
 }
 document.addEventListener('DOMContentLoaded', () => {
-    const origError = console.error;
-    console.error = function(...args) {
-        origError.apply(console, args);
-        const errDiv = document.createElement('div');
-        errDiv.className = 'debug-error';
-        errDiv.style.color = 'red';
-        errDiv.style.zIndex = '9999';
-        errDiv.innerText = 'ERROR: ' + args.join(' ');
-        document.body.appendChild(errDiv);
-    };
 
-    window.addEventListener('error', function(event) {
-        const errDiv = document.createElement('div');
-        errDiv.className = 'debug-error';
-        errDiv.style.color = 'red';
-        errDiv.style.zIndex = '9999';
-        errDiv.innerText = 'UNCAUGHT ERROR: ' + event.message + ' at ' + event.filename + ':' + event.lineno;
-        document.body.appendChild(errDiv);
-    });
-
-    const origLog = console.log;
-    console.log = function(...args) {
-        origLog.apply(console, args);
-        const logDiv = document.createElement('div');
-        logDiv.className = 'debug-log';
-        logDiv.style.color = 'blue';
-        logDiv.style.zIndex = '9999';
-        logDiv.innerText = 'LOG: ' + args.join(' ');
-        document.body.appendChild(logDiv);
-    };
 
     const statusDiv = document.getElementById('connection-status');
     const form = document.getElementById('registro-form');
     const syncList = document.getElementById('sync-list');
-    
+
     // UI Elements Auth
     const loginPanel = document.getElementById('login-panel');
     const loginForm = document.getElementById('login-form');
     const userInfoPanel = document.getElementById('user-info-panel');
     const currentRoleSpan = document.getElementById('current-role');
     const logoutBtn = document.getElementById('logout-btn');
-    
+
     const registroPanel = document.getElementById('registro-panel');
     const transportePanel = document.getElementById('transporte-panel');
     const acopioPanel = document.getElementById('acopio-panel');
     const notarizarPanel = document.getElementById('notarizar-panel');
     const exportarPanel = document.getElementById('exportar-panel');
 
-// window.evaluarPantalla movida arriba
+    // window.evaluarPantalla movida arriba
 
     let transportMap = null;
     let transportMarker = null;
 
-    function initTransportMap() {
+    window.initTransportMap = function () {
         if (!document.getElementById('mapa-transporte')) return;
-        
+
         // Si no existe L (Leaflet), ignorar
         if (typeof L === 'undefined') return;
 
@@ -140,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(transportMap);
-            
+
             transportMarker = L.marker([-34.6037, -58.3816]).addTo(transportMap)
                 .bindPopup('Buscando ubicación...')
                 .openPopup();
@@ -151,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const lon = pos.coords.longitude;
                     transportMap.setView([lat, lon], 15);
                     transportMarker.setLatLng([lat, lon]).bindPopup('Tu ubicación actual (GPS)').openPopup();
-                    
+
                     const placeholder = document.getElementById('map-placeholder');
                     if (placeholder) placeholder.style.display = 'none';
                 }, (err) => {
@@ -178,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function cargarDatosIniciales(role) {
+    window.cargarDatosIniciales = async function (role) {
         const token = localStorage.getItem('agtech_token');
         if (!token) return;
 
@@ -204,18 +171,66 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (role === 'Transportista') {
                 const res = await fetch('http://localhost:3000/api/lotes/transportes-disponibles', { headers: { 'Authorization': 'Bearer ' + token } });
                 const json = await res.json();
-                const select = document.getElementById('idLoteTransporte');
-                if (select && json.success) {
-                    select.innerHTML = '<option value="">Seleccione un lote cosechado...</option>' + 
-                        json.data.map(l => `<option value="${l.id}">${l.id} - ${l.volumenToneladas} TN (Origen: ${l.renspa})</option>`).join('');
+                const container = document.getElementById('listaLotesTransporte');
+                const hiddenInput = document.getElementById('idLoteTransporte');
+                if (container && json.success) {
+                    if (json.data.length === 0) {
+                        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; font-size: 0.9rem;">No hay lotes cosechados disponibles.</p>';
+                        hiddenInput.value = '';
+                    } else {
+                        container.innerHTML = json.data.map(l => `
+                            <div class="lot-card" data-id="${l.id}">
+                                <div class="lot-card-info">
+                                    <h4>Lote: ${l.id}</h4>
+                                    <p style="margin-bottom: 2px;">RENSPA Origen: ${l.renspa}</p>
+                                    <p>Geoloc: ${l.geolocalizacion}</p>
+                                    <p style="margin-top: 6px; font-weight: bold; color: var(--secondary-color); font-size: 0.95rem;">${l.volumenToneladas} TN</p>
+                                </div>
+                                <div class="lot-card-status">${l.estado}</div>
+                            </div>
+                        `).join('');
+
+                        const cards = container.querySelectorAll('.lot-card');
+                        cards.forEach(card => {
+                            card.addEventListener('click', () => {
+                                cards.forEach(c => c.classList.remove('selected'));
+                                card.classList.add('selected');
+                                hiddenInput.value = card.dataset.id;
+                            });
+                        });
+                    }
                 }
             } else if (role === 'Acopiador / Cooperativa') {
                 const res = await fetch('http://localhost:3000/api/lotes/entrantes', { headers: { 'Authorization': 'Bearer ' + token } });
                 const json = await res.json();
-                const select = document.getElementById('idLoteAcopio');
-                if (select && json.success) {
-                    select.innerHTML = '<option value="">Seleccione un camión en tránsito...</option>' + 
-                        json.data.map(l => `<option value="${l.id}">${l.id} - ${l.volumenToneladas} TN</option>`).join('');
+                const container = document.getElementById('listaLotesAcopio');
+                const hiddenInput = document.getElementById('idLoteAcopio');
+                if (container && json.success) {
+                    if (json.data.length === 0) {
+                        container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; font-size: 0.9rem;">No hay camiones en tránsito.</p>';
+                        hiddenInput.value = '';
+                    } else {
+                        container.innerHTML = json.data.map(l => `
+                            <div class="lot-card" data-id="${l.id}">
+                                <div class="lot-card-info">
+                                    <h4>Lote: ${l.id}</h4>
+                                    <p style="margin-bottom: 2px;">RENSPA: ${l.renspa}</p>
+                                    <p>Geoloc: ${l.geolocalizacion}</p>
+                                    <p style="margin-top: 6px; font-weight: bold; color: var(--secondary-color); font-size: 0.95rem;">${l.volumenToneladas} TN</p>
+                                </div>
+                                <div class="lot-card-status">${l.estado}</div>
+                            </div>
+                        `).join('');
+
+                        const cards = container.querySelectorAll('.lot-card');
+                        cards.forEach(card => {
+                            card.addEventListener('click', () => {
+                                cards.forEach(c => c.classList.remove('selected'));
+                                card.classList.add('selected');
+                                hiddenInput.value = card.dataset.id;
+                            });
+                        });
+                    }
                 }
             }
         } catch (e) {
@@ -256,24 +271,24 @@ document.addEventListener('DOMContentLoaded', () => {
         window.evaluarPantalla();
         agregarLog(`ℹ️ Sesión cerrada.`);
     });
-    
+
     // IndexedDB Setup
     let db;
     const request = indexedDB.open('AgTechDB', 1);
 
-    request.onupgradeneeded = function(event) {
+    request.onupgradeneeded = function (event) {
         db = event.target.result;
         if (!db.objectStoreNames.contains('lotes_pendientes')) {
             db.createObjectStore('lotes_pendientes', { keyPath: 'idLote' });
         }
     };
 
-    request.onsuccess = function(event) {
+    request.onsuccess = function (event) {
         db = event.target.result;
         updateOnlineStatus(); // Validar al cargar y tras abrir la DB
     };
 
-    request.onerror = function(event) {
+    request.onerror = function (event) {
         console.error("Error al abrir IndexedDB", event);
     };
 
@@ -288,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             statusDiv.textContent = 'Estado: Online (Conectado al Backend)';
             statusDiv.className = 'status-indicator online';
             showToast('Conexión restaurada. Sincronizando datos...', 'success');
-            
+
             if ('serviceWorker' in navigator && 'SyncManager' in window) {
                 navigator.serviceWorker.ready.then(sw => {
                     return sw.sync.register('sync-lotes');
@@ -331,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const renspa = document.getElementById('renspa').value || '';
         const fileInput = document.getElementById('documento');
         const fileName = fileInput && fileInput.files.length > 0 ? fileInput.files[0].name : '';
-        
+
         const idLoteInput = document.getElementById('idLote');
         if (!idLoteInput) return;
 
@@ -359,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const btn = document.getElementById('btn-registrar');
         setLoadingState(btn, true);
-        
+
         const fileInput = document.getElementById('documento');
         const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
 
@@ -396,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         form.reset();
         setLoadingState(btn, false);
-        cargarDatosIniciales('Productor Agrícola'); // Refrescar lista
+        window.cargarDatosIniciales('Productor Agrícola'); // Refrescar lista
 
         // Actualizar el timestamp para el próximo lote y limpiar preview
         currentLoteTimestamp = new Date().toISOString();
@@ -415,7 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const res = await fetch('http://localhost:3000/api/lotes/transporte', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
                     },
@@ -424,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await res.json();
                 if (result.success) {
                     agregarLog(`<span class="success-text">✅ [TRANSPORTE] Lote ${idLote} actualizado a EN_TRANSITO.</span>`);
-                    cargarDatosIniciales('Transportista');
+                    window.cargarDatosIniciales('Transportista');
                 } else {
                     agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR TRANSPORTE] Lote ${idLote}: ${result.error}</span>`);
                 }
@@ -451,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const res = await fetch('http://localhost:3000/api/lotes/acopio', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
                     },
@@ -460,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await res.json();
                 if (result.success) {
                     agregarLog(`<span class="success-text">✅ [ACOPIO] Lote ${idLote} actualizado a ACONDICIONADO.</span>`);
-                    cargarDatosIniciales('Acopiador / Cooperativa');
+                    window.cargarDatosIniciales('Acopiador / Cooperativa');
                 } else {
                     agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR ACOPIO] Lote ${idLote}: ${result.error}</span>`);
                 }
@@ -490,10 +505,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (json.success && json.data.length > 0) {
                     const l = json.data[0]; // Seleccionamos el primero
                     resultDiv.innerHTML = `
-                        <div style="background: #1b4332; padding: 15px; border-radius: 8px;">
-                            <p><strong>Lote Encontrado:</strong> ${l.id}</p>
-                            <p><strong>Estado Actual:</strong> ${l.estado}</p>
-                            ${l.ipfsCID ? `<p><strong>IPFS Doc:</strong> <a href="http://127.0.0.1:8080/ipfs/${l.ipfsCID}" target="_blank" style="color:#4ade80;">Ver Documento</a></p>` : ''}
+                        <div style="background: #1b4332; padding: 15px; border-radius: 8px; color: #e5e7eb; margin-top: 15px; word-break: break-all; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <p style="margin-bottom: 8px;"><strong style="color: #ffffff;">Lote Encontrado:</strong> ${l.id}</p>
+                            <p style="margin-bottom: 8px;"><strong style="color: #ffffff;">Estado Actual:</strong> ${l.estado}</p>
+                            ${l.ipfsCID ? `<p style="margin-bottom: 0;"><strong style="color: #ffffff;">IPFS Doc:</strong> <a href="http://127.0.0.1:8080/ipfs/${l.ipfsCID}" target="_blank" style="color:#4ade80; text-decoration: underline; font-weight: bold;">Ver Documento</a></p>` : ''}
                         </div>
                     `;
                     document.getElementById('lote-seleccionado-senasa').textContent = l.id;
@@ -516,12 +531,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const idLote = document.getElementById('idLoteNotarizar').value;
             const motivo = prompt("Ingrese el motivo del bloqueo fitosanitario:");
             if (!motivo) return;
-            
+
             setLoadingState(btnBloquear, true);
             try {
                 const res = await fetch('http://localhost:3000/api/lotes/bloquear', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
                     },
@@ -552,7 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const res = await fetch('http://localhost:3000/api/lotes/notarizar', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
                     },
@@ -579,12 +594,12 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const idLote = document.getElementById('idLoteExportar').value;
             const exportadorAddress = document.getElementById('walletExportador').value;
-            
+
             agregarLog(`⏳ [NFT] Acuñando token en Polygon para lote ${idLote}...`);
             try {
                 const res = await fetch('http://localhost:3000/api/lotes/exportar', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
                     },
@@ -593,21 +608,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const result = await res.json();
                 if (result.success) {
                     agregarLog(`<span class="success-text">✅ [NFT] Token Acuñado. TX: ${result.txHash}</span>`);
-                    
+
                     // Mostrar QR link
                     const qrPanel = document.getElementById('qr-result-panel');
                     const qrLink = document.getElementById('qr-link');
                     const qrImage = document.getElementById('qr-image');
                     qrPanel.style.display = 'block';
-                    
+
                     // Asegurar que el link apunte al frontend local verificador con la ruta base correcta
                     // Evitamos usar .html porque el servidor 'serve' hace un 301 redirect que borra los query parameters (?id=...)
                     const basePath = window.location.pathname.replace(/\/index\.html$/, '/').replace(/\/$/, '');
                     const localVerifyUrl = `${window.location.origin}${basePath}/verificador?id=${idLote}&tx=${result.txHash}`;
-                    
+
                     qrLink.href = localVerifyUrl;
                     qrLink.textContent = `Abrir Trazabilidad de ${idLote}`;
-                    
+
                     // Generar la imagen del QR usando la API gratuita de QR Server
                     const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(localVerifyUrl)}`;
                     qrImage.src = qrApiUrl;
@@ -629,16 +644,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const transaction = db.transaction(['lotes_pendientes'], 'readwrite');
         const objectStore = transaction.objectStore('lotes_pendientes');
         const request = objectStore.add(data);
-        
-        request.onsuccess = function() {
+
+        request.onsuccess = function () {
             agregarLog(`📦 [OFFLINE] Lote ${data.idLote} guardado en cache local. Esperando red...`);
             showToast(`Lote ${data.idLote} guardado localmente (IndexedDB).`, 'warning');
-            
+
             if ('serviceWorker' in navigator && 'SyncManager' in window) {
                 navigator.serviceWorker.ready.then(sw => sw.sync.register('sync-lotes').catch(e => console.warn('Background sync disabled', e)));
             }
         };
-        request.onerror = function(e) {
+        request.onerror = function (e) {
             console.error("Error al guardar offline:", e.target.error);
             agregarLog(`❌ [ERROR OFFLINE] No se pudo guardar el lote ${data.idLote}.`);
             showToast('Error al guardar datos offline', 'error');
@@ -652,12 +667,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const objectStore = transaction.objectStore('lotes_pendientes');
         const request = objectStore.getAll();
 
-        request.onsuccess = async function(event) {
+        request.onsuccess = async function (event) {
             const pendientes = event.target.result;
             if (pendientes.length === 0) return;
 
             agregarLog(`🔄 Sincronizando ${pendientes.length} registros offline...`);
-            
+
             for (let i = 0; i < pendientes.length; i++) {
                 await enviarAlBackend(pendientes[i], true);
             }
@@ -685,11 +700,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData
             });
             const result = await res.json();
-            
+
             if (result.success) {
                 agregarLog(`<span class="success-text">✅ [ONLINE] Lote ${data.idLote} registrado en Blockchain Privada.</span>`);
                 showToast(`Lote ${data.idLote} sincronizado con éxito.`, 'success');
-                
+
                 if (isSync && db) {
                     // Remover de IndexedDB si fue sincronizado exitosamente
                     const tx = db.transaction(['lotes_pendientes'], 'readwrite');

@@ -36,7 +36,7 @@ const USUARIOS = [
   { username: 'productor1', password: '123', rol: 'Productor Agrícola', renspa: '01.002.0.00345/00' },
   { username: 'acopio_coop', password: '123', rol: 'Acopiador / Cooperativa' },
   { username: 'transporte_log', password: '123', rol: 'Transportista' },
-  { username: 'senasa_fiscal', password: '123', rol: 'Organismo de Control (SENASA/AFIP)' },
+  { username: 'senasa_fiscal', password: '123', rol: 'Organismo de Control (SENASA/ARCA)' },
   { username: 'exportador_bb', password: '123', rol: 'Exportador (Puertos)' }
 ];
 
@@ -102,7 +102,7 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/lotes/registrar', verificarRol(['Productor Agrícola']), upload.single('documento'), async (req, res) => {
   try {
     const { idLote, geolocalizacion, volumenToneladas } = req.body;
-    const renspa = req.user.renspa;
+    const renspa = req.body.renspa || req.user.renspa;
 
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'El archivo PDF de Carta de Porte es obligatorio' });
@@ -119,6 +119,7 @@ app.post('/api/lotes/registrar', verificarRol(['Productor Agrícola']), upload.s
     const nuevoLote = fabricLedger.registrarCosechaPrimaria(
       idLote, renspa, geolocalizacion, volumenToneladas, ipfsCID
     );
+    nuevoLote.owner = req.user.username;
 
     res.status(201).json({ success: true, data: nuevoLote, cid: ipfsCID });
   } catch (error) {
@@ -134,7 +135,7 @@ app.post('/api/lotes/registrar', verificarRol(['Productor Agrícola']), upload.s
 
 app.get('/api/lotes/mis-lotes', verificarRol(['Productor Agrícola']), (req, res) => {
   try {
-    const lotes = fabricLedger.obtenerLotesPorRenspa(req.user.renspa);
+    const lotes = fabricLedger.obtenerTodosLotes().filter(l => l.owner === req.user.username || l.renspa === req.user.renspa);
     res.json({ success: true, data: lotes });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -159,13 +160,13 @@ app.get('/api/lotes/transportes-disponibles', verificarRol(['Transportista']), (
   }
 });
 
-app.get('/api/lotes/buscar', verificarRol(['Organismo de Control (SENASA/AFIP)']), (req, res) => {
+app.get('/api/lotes/buscar', verificarRol(['Organismo de Control (SENASA/ARCA)']), (req, res) => {
   try {
     const query = req.query.q || '';
     if (!query) {
       return res.json({ success: true, data: fabricLedger.obtenerTodosLotes() });
     }
-    const match = fabricLedger.obtenerTodosLotes().filter(l => 
+    const match = fabricLedger.obtenerTodosLotes().filter(l =>
       l.id.includes(query) || (l.renspa && l.renspa.includes(query))
     );
     res.json({ success: true, data: match });
@@ -182,7 +183,7 @@ app.post('/api/lotes/transporte', verificarRol(['Transportista']), async (req, r
   try {
     const { idLote } = req.body;
     const lote = fabricLedger.obtenerLote(idLote);
-    
+
     if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
     if (lote.estado !== 'COSECHADO') return res.status(400).json({ success: false, error: "El lote debe estar cosechado para iniciar transporte." });
 
@@ -201,7 +202,7 @@ app.post('/api/lotes/acopio', verificarRol(['Acopiador / Cooperativa']), async (
   try {
     const { idLote, pesajeFinal, calidad } = req.body;
     const lote = fabricLedger.obtenerLote(idLote);
-    
+
     if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
     if (lote.estado !== 'EN_TRANSITO') return res.status(400).json({ success: false, error: "El lote no está en tránsito." });
 
@@ -213,10 +214,10 @@ app.post('/api/lotes/acopio', verificarRol(['Acopiador / Cooperativa']), async (
 });
 
 /**
- * 4. POST /api/lotes/notarizar (SENASA/AFIP)
+ * 4. POST /api/lotes/notarizar (SENASA/ARCA)
  * Simula sellado en Blockchain Federal Argentina (BFA).
  */
-app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/AFIP)']), async (req, res) => {
+app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/ARCA)']), async (req, res) => {
   try {
     const { idLote } = req.body;
     const lote = fabricLedger.obtenerLote(idLote);
@@ -242,12 +243,12 @@ app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/AFI
  * 5. POST /api/lotes/bloquear (Regulador)
  * Emitir Alerta Fitosanitaria y bloquear lote.
  */
-app.post('/api/lotes/bloquear', verificarRol(['Organismo de Control (SENASA/AFIP)']), async (req, res) => {
+app.post('/api/lotes/bloquear', verificarRol(['Organismo de Control (SENASA/ARCA)']), async (req, res) => {
   try {
     const { idLote, motivo } = req.body;
     const lote = fabricLedger.obtenerLote(idLote);
     if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
-    
+
     const loteActualizado = fabricLedger.actualizarEstadoLogistico(idLote, 'BLOQUEADO', req.user.rol, `ALERTA FITOSANITARIA: ${motivo}`);
     res.json({ success: true, data: loteActualizado });
   } catch (error) {
@@ -265,6 +266,15 @@ app.post('/api/lotes/exportar', verificarRol(['Exportador (Puertos)']), async (r
     const lote = fabricLedger.obtenerLote(idLote);
 
     if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
+
+    // Máquina de estados estricta (Oráculo Federado)
+    if (lote.estado !== 'ACONDICIONADO') {
+      return res.status(400).json({ success: false, error: "Oráculo: El lote debe ser procesado y pesado por el Acopiador (estado ACONDICIONADO) antes de exportar." });
+    }
+
+    if (!lote.bfaHash) {
+      return res.status(400).json({ success: false, error: "Oráculo: El lote requiere notarización del ente regulador (SENASA/BFA) antes de exportar." });
+    }
 
     // 1. Crear metadata del NFT
     const tokenMetadata = {

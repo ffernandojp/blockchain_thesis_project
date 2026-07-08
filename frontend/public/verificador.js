@@ -42,6 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         content.style.display = 'block';
         loteTitle.textContent = `${lote.id}`;
 
+        const qrImage = document.getElementById('qr-image');
+        if (qrImage) {
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`;
+            qrImage.src = qrApiUrl;
+        }
+
         let html = '';
 
         // Paso 1: Origen y Cosecha (Productor)
@@ -121,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // Paso Notarización BFA (Estado/AFIP/SENASA)
+        // Paso Notarización BFA (Estado/ARCA/SENASA)
         if (lote.bfaHash) {
             html += `
                 <div class="timeline-item">
@@ -129,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="badges-container">
                             <span class="badge bfa">2. Notarización Estatal</span>
                         </div>
-                        <h3>SENASA / AFIP</h3>
+                        <h3>SENASA / ARCA</h3>
                         <p style="font-size: 0.9rem; margin-bottom: 12px;">Los datos han sido sellados en la Blockchain Federal Argentina.</p>
                         <div class="hash-container">
                             <span class="hash-label">BFA Hash (SHA-256)</span>
@@ -144,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const exportTx = lote.historialTransacciones.find(t => t.accion === 'CAMBIO_ESTADO: EXPORTADO');
         if (exportTx || txHashQuery) {
             let txHash = txHashQuery || (exportTx && exportTx.detalles.match(/TX:\\s*(0x[a-fA-F0-9]+)/) ? exportTx.detalles.match(/TX:\\s*(0x[a-fA-F0-9]+)/)[1] : 'Pendiente');
-            
+
             html += `
                 <div class="timeline-item">
                     <div class="content">
