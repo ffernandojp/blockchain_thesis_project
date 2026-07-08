@@ -116,6 +116,12 @@ app.post('/api/lotes/registrar', verificarRol(['Productor Agrícola']), upload.s
 
     let ipfsCID = await ipfsService.uploadRegulatoryDocument(req.file.buffer, req.file.originalname);
 
+    // Control para evitar registrar el mismo documento (Carta de Porte) dos veces
+    const loteExistente = fabricLedger.obtenerTodosLotes().find(l => l.ipfsCID === ipfsCID);
+    if (loteExistente) {
+      return res.status(400).json({ success: false, error: `El documento Carta de Porte ya está registrado en el lote ${loteExistente.id}.` });
+    }
+
     const nuevoLote = fabricLedger.registrarCosechaPrimaria(
       idLote, renspa, geolocalizacion, volumenToneladas, ipfsCID
     );

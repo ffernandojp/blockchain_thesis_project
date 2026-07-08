@@ -92,6 +92,10 @@ async function sincronizarLotesIndexedDB() {
                         if (res.ok) {
                             const delTx = db.transaction('lotes_pendientes', 'readwrite');
                             delTx.objectStore('lotes_pendientes').delete(lote.idLote);
+                        } else if (res.status === 400) {
+                            // Si la petición es inválida o duplicada, se elimina de IndexedDB para evitar reintentos infinitos
+                            const delTx = db.transaction('lotes_pendientes', 'readwrite');
+                            delTx.objectStore('lotes_pendientes').delete(lote.idLote);
                         }
                     } catch (err) {
                         console.error('[SW] Error enviando lote', err);
