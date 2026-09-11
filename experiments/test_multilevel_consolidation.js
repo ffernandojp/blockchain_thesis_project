@@ -2,8 +2,7 @@
  * Test de Aceptación y Validación Rigurosa:
  * Consolidación Multinivel, Consumo de Estados (No Doble Gasto),
  * Invariante de Conservación de Masa y Árbol Genealógico de 3 Niveles.
- * 
- * Basado en las Especificaciones de la Tesina (Sección 6.2.5).
+ * Arquitectura de Trazabilidad de Masa y Balance de Materia.
  */
 
 const assert = require('assert');

@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <h3>Cosecha Primaria con CPE de Campo (Flete Corto)</h3>
                     <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 14px;">
-                        Resolución algorítmica recursiva hacia atrás (Backtracking inverso - Sección 6.2.5). Desglose exacto de aportes primarios:
+                        Resolución algorítmica recursiva hacia atrás (Backtracking inverso). Desglose exacto de aportes primarios:
                     </p>
 
                     ${esMezcla ? `
@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <h3 class="genealogy-title">Resolución Algorítmica de Cadena de Custodia</h3>
                     <p class="genealogy-subtitle">
-                        Backtracking inverso automatizado (Sección 6.2.5). Recorrido completo del grafo acíclico dirigido desde el embarque final hasta cada productor primario.
+                        Backtracking inverso automatizado. Recorrido completo del grafo acíclico dirigido desde el embarque final hasta cada productor primario.
                     </p>
 
                     <div class="genealogy-invariants-banner">

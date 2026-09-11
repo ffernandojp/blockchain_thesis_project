@@ -77,7 +77,7 @@ Emulador en memoria del libro mayor (**World State**) y el código de contrato i
   * `emitirCpeTraslado`: Valida certificación fitosanitaria y restringe destinos a `Puerto de Bahía Blanca` o `Puerto de Quequén`, transicionando a `EN_TRANSITO_PUERTO`.
   * `confirmarArriboPuerto`: Valida llegada a terminal portuaria y confirma la CPE de descarga (`ARRIBADO_PUERTO`).
   * `verificarHabilitadoParaEmbarque`: Evalúa concurrentemente: (1) Arribo y CPE de descarga confirmada, (2) Sello BFA comprobable, (3) Trazabilidad de masa hacia atrás completa.
-  * `obtenerTrazabilidadCompleta`: Algoritmo de backtracking recursivo inverso (Sección 6.2.5 de la tesina) que resuelve el árbol genealógico de mezclas y calcula on-the-fly el porcentaje exacto de participación de cada cosecha primaria precursor (% Participación = [Volumen Origen / Volumen Total Mezcla] * 100).
+  * `obtenerTrazabilidadCompleta`: Algoritmo de backtracking recursivo inverso que resuelve el árbol genealógico de mezclas y calcula on-the-fly el porcentaje exacto de participación de cada cosecha primaria precursor (% Participación = [Volumen Origen / Volumen Total Mezcla] * 100).
   * `actualizarEstadoLogistico`: Modifica el estado del lote y añade una firma (actor, fecha y detalles de la acción) al arreglo `historialTransacciones`, garantizando la inmutabilidad lógica del historial de eventos.
 
 ---

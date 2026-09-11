@@ -37,7 +37,7 @@ const pdf = require('pdf-parse');
  * @property {CampoEstablecimiento[]} [campos] - Establecimientos habilitados (relación 1:N).
  */
 
-const JWT_SECRET = 'tesina_secreto_123';
+const JWT_SECRET = process.env.JWT_SECRET || 'agro_trade_secret_key_2026';
 
 /** @type {UsuarioSistema[]} */
 const USUARIOS = [

@@ -1,4 +1,4 @@
-describe('Verificador Público QR - Trazabilidad de Masa en Silos (Sección 6.2.5)', () => {
+describe('Verificador Público QR - Trazabilidad de Masa en Silos', () => {
 
     it('Debe renderizar la cabecera enriquecida y el desglose porcentual exacto en lote mezclado (40% / 60%)', () => {
         cy.intercept('GET', '**/api/lotes/SILO-BAHIA-100', {

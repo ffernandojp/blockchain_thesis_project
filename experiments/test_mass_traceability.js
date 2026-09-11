@@ -1,6 +1,6 @@
 /**
  * Test de Verificación: Trazabilidad de Masa y Backtracking Recursivo
- * Conforme a la Sección 6.2.5 de la Tesina: "Cálculo Dinámico de Proporciones en la Búsqueda Recursiva Inversa"
+ * Cálculo Dinámico de Proporciones en la Búsqueda Recursiva Inversa
  */
 
 const assert = require('assert');
@@ -69,7 +69,7 @@ assert(['ACOPIADO_ACONDICIONADO', 'ACONDICIONADO'].includes(loteMezcla100.estado
 assert.deepStrictEqual(loteMezcla100.lotesOrigen, ['LOTE-AGRO-001', 'LOTE-AGRO-002']);
 console.log('✅ Test 2 Superado: Preservación inmutable y lote consolidado validados.\n');
 
-// --- TEST 3: Backtracking Recursivo Inverso y Cálculo de Proporciones (Sección 6.2.5) ---
+// --- TEST 3: Backtracking Recursivo Inverso y Cálculo de Proporciones ---
 console.log('Test 3: Backtracking recursivo y cálculo dinámico de proporciones');
 const traza100 = fabricLedger.obtenerTrazabilidadCompleta('SILO-BAHIA-100');
 assert.strictEqual(traza100.id, 'SILO-BAHIA-100');
@@ -153,4 +153,4 @@ assert.strictEqual(trazaMono.desgloseOrigenes[0].porcentajeAporte, 100.0);
 assert.strictEqual(trazaMono.desgloseOrigenes[0].volumenAportadoTN, 85.5);
 console.log('✅ Test 5 Superado: Lote monovarietal resuelve 100% de participación directa.\n');
 
-console.log('🎉 TODOS LOS TESTS DE TRAZABILIDAD DE MASA (SECCIÓN 6.2.5) HAN PASADO EXITOSAMENTE.');
+console.log('🎉 TODOS LOS TESTS DE TRAZABILIDAD DE MASA HAN PASADO EXITOSAMENTE.');

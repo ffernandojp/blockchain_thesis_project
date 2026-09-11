@@ -3,7 +3,7 @@
  * Representa la red permisionada del consorcio agroindustrial.
  * 
  * Implementa el cálculo dinámico de proporciones en búsqueda recursiva inversa (backtracking)
- * para auditoría de mezclas en silos (commingling / balance de masa), según la sección 6.2.5 de la tesina.
+ * para auditoría de mezclas en silos (commingling / balance de masa).
  */
 
 function normalizarGeolocalizacion(geo) {
@@ -174,7 +174,7 @@ class FabricMockLedger {
   }
 
   /**
-   * Backtracking Recursivo Inverso (Sección 6.2.5 de la Tesina).
+   * Backtracking Recursivo Inverso.
    * Resuelve hacia atrás el grafo acíclico dirigido (DAG) de procedencia:
    * - Nivel 1 (Exportación / Lote Final): Volumen total embarcado y precintado.
    * - Nivel 2 (Nodos Intermedios de Acopio): Plantas y silos donde se efectuó acondicionamiento y mezclas intermedias.
