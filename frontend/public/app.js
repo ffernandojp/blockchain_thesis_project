@@ -1441,7 +1441,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const datosInspeccion = {
                 plagasLibre: true,
+                plagasCuarentenarias: 'Ausencia certificada de plagas cuarentenarias',
                 calidad: senasaCalidad ? senasaCalidad.value.trim() : 'Grado 2 Homogéneo Conforme',
+                calidadTipificada: senasaCalidad ? senasaCalidad.value.trim() : 'Grado 2 Homogéneo Conforme',
                 inspector: senasaInspector ? senasaInspector.value.trim() : 'Inspector SENASA / ARCA'
             };
 
@@ -1452,7 +1454,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
                     },
-                    body: JSON.stringify({ idLote, datosInspeccion })
+                    body: JSON.stringify({
+                        idLote,
+                        inspector: datosInspeccion.inspector,
+                        calidadTipificada: datosInspeccion.calidadTipificada,
+                        plagasCuarentenarias: datosInspeccion.plagasCuarentenarias,
+                        datosInspeccion
+                    })
                 });
                 const result = await res.json();
                 const feedbackContainer = document.getElementById('senasa-feedback-container');

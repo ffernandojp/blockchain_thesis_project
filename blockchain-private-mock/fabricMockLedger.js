@@ -440,6 +440,7 @@ class FabricMockLedger {
       bfaHash: bfaHash,
       fechaCertificacion: ahora
     };
+    lote.inspeccionSenasa = lote.certificacionSenasa;
 
     lote.historialTransacciones.push({
       accion: 'FISCALIZACION_SENASA_BFA',

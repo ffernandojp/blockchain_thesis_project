@@ -282,13 +282,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // --- HITO 2: ACONDICIONAMIENTO Y SILOS EN PLANTA DE ACOPIO ---
         const acopioTx = lote.historialTransacciones && lote.historialTransacciones.find(t => 
-            t.accion === 'CAMBIO_ESTADO: ACONDICIONADO' || t.accion === 'ACOPIO_Y_MEZCLA' || t.accion === 'ACONDICIONAMIENTO_GRANO' || t.accion === 'RECEPCION_BALANZA'
+            t.accion === 'CAMBIO_ESTADO: ACONDICIONADO' || t.accion === 'ACOPIO_Y_MEZCLA' || t.accion === 'ACONDICIONAMIENTO_GRANO' || t.accion === 'RECEPCION_BALANZA' || (t.accion && (t.accion.includes('RECEPCION') || t.accion.includes('ACOPIO') || t.accion.includes('ACONDICIONAMIENTO')))
         );
         const fasesAcopio = ['RECEPCIONADO_ACOPIO', 'ACOPIADO_ACONDICIONADO', 'ACONDICIONADO', 'VALIDADO_SENASA', 'EN_TRANSITO_PUERTO', 'ARRIBADO_PUERTO', 'EXPORTADO', 'MEZCLADO_ACONDICIONADO'];
 
-        if (acopioTx || fasesAcopio.includes(estado) || esMezcla || lote.acondicionamiento || lote.pesajeBalanza) {
+        if (acopioTx || fasesAcopio.includes(estado) || esMezcla || lote.acondicionamiento || lote.pesajeBalanza || lote.calidad || lote.calidadParams) {
             const pesajeNeto = lote.pesajeBalanza || volTotal;
-            const calidadComercial = lote.calidad || (lote.acondicionamiento && lote.acondicionamiento.tipificacion) || 'Grado 2 Oficial';
+            const calidadComercial = lote.calidad || (lote.calidadParams && lote.calidadParams.calidadComercial) || (lote.acondicionamiento && lote.acondicionamiento.tipificacion) || 'Calidad Conforme';
             html += `
                 <div class="timeline-item">
                     <div class="content">
@@ -318,8 +318,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // --- HITO 3: FISCALIZACIÓN OFICIAL SENASA Y NOTARIZACIÓN BFA ---
-        if (lote.bfaHash || lote.inspeccionSenasa || ['VALIDADO_SENASA', 'EN_TRANSITO_PUERTO', 'ARRIBADO_PUERTO', 'EXPORTADO'].includes(estado)) {
-            const insp = lote.inspeccionSenasa || {};
+        const senasaCert = lote.certificacionSenasa || lote.inspeccionSenasa || {};
+        if (lote.bfaHash || lote.inspeccionSenasa || lote.certificacionSenasa || ['VALIDADO_SENASA', 'EN_TRANSITO_PUERTO', 'ARRIBADO_PUERTO', 'EXPORTADO'].includes(estado)) {
+            const insp = senasaCert;
+            const inspectorNombre = insp.inspector || (lote.historialTransacciones && lote.historialTransacciones.find(t => t.actor && t.actor.includes('SENASA')) ? 'Inspector SENASA / ARCA' : 'Fiscalización SENASA');
+            const plagasTexto = insp.plagasCuarentenarias || 'Libre de plagas cuarentenarias / gorgojo vivo';
             html += `
                 <div class="timeline-item">
                     <div class="content">
@@ -334,11 +337,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="data-grid" style="margin-bottom: 10px;">
                             <div class="data-row">
                                 <span class="data-label">Condición Cuarentenaria</span>
-                                <span class="data-value" style="color: #166534; font-weight: 700;">✓ Libre de plagas cuarentenarias / gorgojo vivo</span>
+                                <span class="data-value" style="color: #166534; font-weight: 700;">✓ ${plagasTexto}</span>
                             </div>
                             <div class="data-row">
                                 <span class="data-label">Inspector Actuante</span>
-                                <span class="data-value">${insp.inspector || 'SENASA / ARCA Fiscalización'}</span>
+                                <span class="data-value">${inspectorNombre}</span>
                             </div>
                         </div>
                         ${lote.bfaHash ? `
@@ -355,7 +358,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- HITO 4: CPE DE TRASLADO Y FLETE LARGO A PUERTO (TRAMO 2) ---
         const cpe = lote.cpeTraslado;
         if (cpe || ['EN_TRANSITO_PUERTO', 'ARRIBADO_PUERTO', 'EXPORTADO'].includes(estado)) {
-            const puertoDestino = cpe ? cpe.destinoPuerto : 'Puerto de Bahía Blanca';
+            const puertoDestino = (cpe && cpe.destinoPuerto) || (lote.arriboPuerto && lote.arriboPuerto.terminal) || 'Puerto de Bahía Blanca';
+            const numCpe = (cpe && cpe.numeroCPE) ? cpe.numeroCPE : 'Pendiente de emisión';
+            const ctgTexto = (cpe && cpe.ctg) ? ` (CTG: ${cpe.ctg})` : '';
+            const transportista = (cpe && cpe.transportista) ? cpe.transportista : 'No asignado';
+            const patente = (cpe && cpe.patenteCamion) ? cpe.patenteCamion : 'No asignada';
+
             html += `
                 <div class="timeline-item">
                     <div class="content">
@@ -370,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="data-grid">
                             <div class="data-row">
                                 <span class="data-label">Nueva CPE de Traslado</span>
-                                <span class="data-value"><strong>${cpe ? cpe.numeroCPE : 'CPE-TL-OFICIAL'}</strong> (CTG: ${cpe && cpe.ctg ? cpe.ctg : '12345678'})</span>
+                                <span class="data-value"><strong>${numCpe}</strong>${ctgTexto}</span>
                             </div>
                             <div class="data-row">
                                 <span class="data-label">Destino Portuario Específico</span>
@@ -378,11 +386,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             </div>
                             <div class="data-row">
                                 <span class="data-label">Transportista Asignado</span>
-                                <span class="data-value">${cpe ? cpe.transportista : 'Logística Portuaria S.A.'}</span>
+                                <span class="data-value">${transportista}</span>
                             </div>
                             <div class="data-row">
                                 <span class="data-label">Patente Camión / Convoy</span>
-                                <span class="data-value">${cpe ? cpe.patenteCamion : 'AA 123 CD'}</span>
+                                <span class="data-value">${patente}</span>
                             </div>
                         </div>
                     </div>
@@ -395,7 +403,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (arribo || ['ARRIBADO_PUERTO', 'EXPORTADO'].includes(estado) || lote.auditoriaEmbarque) {
             const aud = lote.auditoriaEmbarque || {};
             const checks = aud.checks || {};
-            const c1 = arribo && arribo.cpeDescargaConfirmada || estado === 'ARRIBADO_PUERTO' || estado === 'EXPORTADO';
+            const c1 = (arribo && arribo.cpeDescargaConfirmada) || estado === 'ARRIBADO_PUERTO' || estado === 'EXPORTADO';
             const c2 = !!lote.bfaHash;
             const c3 = Array.isArray(origenes) && origenes.length > 0 && origenes.every(o => o.renspa);
             const habilitadoEmbarque = c1 && c2 && c3;
@@ -433,7 +441,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <div class="data-grid">
                                 <div class="data-row">
                                     <span class="data-label">Terminal Portuaria</span>
-                                    <span class="data-value">${arribo.terminal || 'Terminal Bahía Blanca'}</span>
+                                    <span class="data-value">${arribo.terminal || (cpe && cpe.destinoPuerto) || 'Terminal Portuaria'}</span>
                                 </div>
                                 <div class="data-row">
                                     <span class="data-label">Balanza de Puerto</span>
@@ -479,7 +487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- HITO 6: CIERRE LOGÍSTICO Y TOKENIZACIÓN NFT (POLYGON / HARDHAT) ---
         const exportTx = lote.historialTransacciones && lote.historialTransacciones.find(t => t.accion === 'CAMBIO_ESTADO: EXPORTADO');
         if (exportTx || effectiveTxHash || estado === 'EXPORTADO') {
-            const displayTx = effectiveTxHash || (exportTx && exportTx.detalles && exportTx.detalles.match(/TX:\s*(0x[a-fA-F0-9]+)/) ? exportTx.detalles.match(/TX:\s*(0x[a-fA-F0-9]+)/)[1] : '0x7a3f89b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9');
+            const displayTx = effectiveTxHash || (exportTx && exportTx.detalles && exportTx.detalles.match(/TX:\s*(0x[a-fA-F0-9]+)/) ? exportTx.detalles.match(/TX:\s*(0x[a-fA-F0-9]+)/)[1] : (lote.txHash || 'Pendiente de emisión'));
 
             html += `
                 <div class="timeline-item">
@@ -508,6 +516,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
         }
+
 
         timeline.innerHTML = html;
     }

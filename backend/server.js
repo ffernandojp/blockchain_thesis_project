@@ -349,6 +349,11 @@ app.post(['/api/lotes/acopio', '/api/lotes/recepcion-acopio'], verificarRol(['Ac
     // Actualizar volumen neto definitivo verificado en balanza oficial
     if (pesajeFinal && !isNaN(parseFloat(pesajeFinal)) && parseFloat(pesajeFinal) > 0) {
       lote.volumenToneladas = parseFloat(parseFloat(pesajeFinal).toFixed(2));
+      lote.pesajeBalanza = lote.volumenToneladas;
+    }
+    if (calidad) {
+      lote.calidad = calidad;
+      lote.calidadComercial = calidad;
     }
 
     const loteActualizado = fabricLedger.actualizarEstadoLogistico(
@@ -416,7 +421,11 @@ app.post('/api/lotes/mezclar', verificarRol(['Acopiador / Cooperativa']), async 
  */
 app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/ARCA)']), async (req, res) => {
   try {
-    const { idLote, inspector, plagasCuarentenarias, calidadTipificada } = req.body;
+    const idLote = req.body.idLote;
+    const datosInspeccion = req.body.datosInspeccion || {};
+    const inspector = req.body.inspector || datosInspeccion.inspector || 'Inspector SENASA / ARCA';
+    const plagasCuarentenarias = req.body.plagasCuarentenarias || datosInspeccion.plagasCuarentenarias || (datosInspeccion.plagasLibre ? 'Ausencia certificada de plagas cuarentenarias' : 'Ausencia certificada de plagas cuarentenarias');
+    const calidadTipificada = req.body.calidadTipificada || datosInspeccion.calidadTipificada || datosInspeccion.calidad || 'Grado 2 Homogéneo Conforme';
     const lote = fabricLedger.obtenerLote(idLote);
 
     if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
@@ -728,20 +737,9 @@ app.get('/api/lotes/:id', (req, res) => {
     res.json({
       success: true,
       data: {
-        id: traza.id,
-        estado: traza.estado,
-        renspa: traza.renspa,
-        geolocalizacion: traza.geolocalizacion,
-        volumenToneladas: traza.volumenToneladas,
-        bfaHash: traza.bfaHash,
+        ...traza,
         tokenId: tokenId,
         txHash: txHash,
-        ipfsCID: traza.ipfsCID,
-        fechaCosecha: traza.fechaCosecha,
-        lotesOrigen: traza.lotesOrigen || [],
-        historialTransacciones: traza.historialTransacciones,
-        desgloseOrigenes: traza.desgloseOrigenes,
-        arbolGenealogico: traza.arbolGenealogico,
         contractAddress: NFT_CONTRACT_ADDRESS
       }
     });
