@@ -58,23 +58,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (estado === 'EXPORTADO') {
             statusClass = 'status-exportado';
             statusIcon = '🚢';
-            statusLabel = 'Lote Exportado (Cierre Logístico)';
-        } else if (estado === 'ACONDICIONADO') {
+            statusLabel = 'Lote Exportado (Cierre Logístico NFT)';
+        } else if (estado === 'ARRIBADO_PUERTO') {
+            statusClass = 'status-arribado-puerto';
+            statusIcon = '⚓';
+            statusLabel = 'Arribado a Puerto (CPE Descarga Confirmada)';
+        } else if (estado === 'EN_TRANSITO_PUERTO') {
+            statusClass = 'status-transito-puerto';
+            statusIcon = '🚛';
+            statusLabel = 'En Tránsito hacia Puerto (Flete Largo CPE)';
+        } else if (estado === 'VALIDADO_SENASA') {
+            statusClass = 'status-validado-senasa';
+            statusIcon = '🛡️';
+            statusLabel = 'Validado por SENASA (Conforme BFA)';
+        } else if (estado === 'ACOPIADO_ACONDICIONADO' || estado === 'ACONDICIONADO') {
             statusClass = 'status-acondicionado';
             statusIcon = '🏭';
             statusLabel = 'Acondicionado en Silo / Planta';
+        } else if (estado === 'RECEPCIONADO_ACOPIO') {
+            statusClass = 'status-recepcionado';
+            statusIcon = '⚖️';
+            statusLabel = 'Recepcionado en Balanza de Acopio';
         } else if (estado === 'MEZCLADO_ACONDICIONADO') {
             statusClass = 'status-mezclado';
             statusIcon = '🔄';
-            statusLabel = 'Consolidado en Silo (Masa Combinada)';
-        } else if (estado === 'EN_TRANSITO') {
+            statusLabel = 'Consolidado en Silo (Masa Homogeneizada)';
+        } else if (estado === 'EN_TRANSITO_ACOPIO' || estado === 'EN_TRANSITO') {
             statusClass = 'status-en-transito';
             statusIcon = '🚚';
-            statusLabel = 'En Tránsito hacia Acopio';
+            statusLabel = 'En Tránsito hacia Acopio (Flete Corto CPE)';
+        } else if (estado === 'COSECHADO') {
+            statusClass = 'status-cosechado';
+            statusIcon = '🌱';
+            statusLabel = 'Cosechado en Campo (CPE Primaria)';
         } else if (estado === 'BLOQUEADO') {
             statusClass = 'status-bloqueado';
             statusIcon = '⛔';
-            statusLabel = 'Bloqueado por SENASA';
+            statusLabel = 'Bloqueado por SENASA / ARCA';
         }
 
         if (loteStatusBadge) {
@@ -134,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 2. Renderizado del Árbol Genealógico Interactivo de 3 Niveles (DAG)
         renderGenealogyTree(lote);
 
-        // 3. Renderizado de la Línea de Tiempo Cronológica
+        // 3. Renderizado de la Línea de Tiempo Cronológica en 6 Hitos Operativos
         let html = '';
 
         const origenes = Array.isArray(lote.desgloseOrigenes) && lote.desgloseOrigenes.length > 0
@@ -151,15 +171,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const esMezcla = origenes.length > 1;
 
-        // --- HITO 1: COMPOSICIÓN DE ORIGEN Y TRAZABILIDAD DE MASA ---
+        // --- HITO 1: COSECHA PRIMARIA Y TRAZABILIDAD DE MASA (TRAMO 1) ---
         html += `
             <div class="timeline-item">
                 <div class="content">
                     <div class="badges-container">
-                        <span class="badge ipfs">1. Genealogía de Cosechas</span>
+                        <span class="badge ipfs">1. Cosecha y Origen Primario</span>
                         ${esMezcla ? '<span class="badge" style="background:#fef08a;color:#713f12;font-weight:700;">Balance de Masa (Silos)</span>' : '<span class="badge" style="background:#dcfce7;color:#166534;">Monovarietal Directo</span>'}
                     </div>
-                    <h3>Composición de Origen y Trazabilidad de Masa</h3>
+                    <h3>Cosecha Primaria con CPE de Campo (Flete Corto)</h3>
                     <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 14px;">
                         Resolución algorítmica recursiva hacia atrás (Backtracking inverso - Sección 6.2.5). Desglose exacto de aportes primarios:
                     </p>
@@ -240,7 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${orig.ipfsCID ? `
                     <div class="ipfs-action-box">
                         <div class="ipfs-cid-text">
-                            <span class="ipfs-cid-label">Carta de Porte Electrónica (CID IPFS):</span>
+                            <span class="ipfs-cid-label">Carta de Porte Electrónica Primaria (CID IPFS):</span>
                             <span class="ipfs-cid-code" title="${orig.ipfsCID}">${orig.ipfsCID}</span>
                         </div>
                         <a href="http://localhost:8080/ipfs/${orig.ipfsCID}" target="_blank" rel="noopener noreferrer" class="btn-ipfs">
@@ -260,28 +280,195 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
 
-        // --- HITO 2: LOGÍSTICA Y TRANSPORTE ---
-        const transTx = lote.historialTransacciones && lote.historialTransacciones.find(t => 
-            t.accion === 'CAMBIO_ESTADO: EN_TRANSITO' || (t.detalles && t.detalles.toLowerCase().includes('camino'))
+        // --- HITO 2: ACONDICIONAMIENTO Y SILOS EN PLANTA DE ACOPIO ---
+        const acopioTx = lote.historialTransacciones && lote.historialTransacciones.find(t => 
+            t.accion === 'CAMBIO_ESTADO: ACONDICIONADO' || t.accion === 'ACOPIO_Y_MEZCLA' || t.accion === 'ACONDICIONAMIENTO_GRANO' || t.accion === 'RECEPCION_BALANZA'
         );
-        if (transTx || estado === 'EN_TRANSITO' || estado === 'ACONDICIONADO' || estado === 'EXPORTADO') {
+        const fasesAcopio = ['RECEPCIONADO_ACOPIO', 'ACOPIADO_ACONDICIONADO', 'ACONDICIONADO', 'VALIDADO_SENASA', 'EN_TRANSITO_PUERTO', 'ARRIBADO_PUERTO', 'EXPORTADO', 'MEZCLADO_ACONDICIONADO'];
+
+        if (acopioTx || fasesAcopio.includes(estado) || esMezcla || lote.acondicionamiento || lote.pesajeBalanza) {
+            const pesajeNeto = lote.pesajeBalanza || volTotal;
+            const calidadComercial = lote.calidad || (lote.acondicionamiento && lote.acondicionamiento.tipificacion) || 'Grado 2 Oficial';
             html += `
                 <div class="timeline-item">
                     <div class="content">
                         <div class="badges-container">
-                            <span class="badge" style="background: #fef08a; color: #854d0e;">2. Logística y Transporte</span>
+                            <span class="badge" style="background: #d9f99d; color: #3f6212;">2. Planta de Acopio y Silos</span>
+                            <span class="badge" style="background: #e0f2fe; color: #0369a1;">Balanza Oficial</span>
                         </div>
-                        <h3>Movilización con Carta de Porte</h3>
-                        <p style="font-size: 0.9rem; margin-bottom: 12px;">Carga movilizada con Carta de Porte Electrónica (CPE) y firma digital del transportista.</p>
+                        <h3>Recepción en Balanza y Acondicionamiento Fitosanitario</h3>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px;">Descarga física, tipificación comercial y tareas obligatorias de acondicionamiento de grano en silo.</p>
                         <div class="data-grid">
                             <div class="data-row">
-                                <span class="data-label">Estado Logístico</span>
-                                <span class="data-value">Carga Recibida y en Tránsito hacia Planta</span>
+                                <span class="data-label">Pesaje Balanza Oficial</span>
+                                <span class="data-value">${pesajeNeto} TN (Pesaje Neto Verificado)</span>
                             </div>
-                            ${transTx && transTx.fecha ? `
                             <div class="data-row">
-                                <span class="data-label">Fecha y Hora</span>
-                                <span class="data-value">${new Date(transTx.fecha).toLocaleString('es-AR')}</span>
+                                <span class="data-label">Calidad Comercial</span>
+                                <span class="data-value">${calidadComercial}</span>
+                            </div>
+                            <div class="data-row" style="grid-column: span 2;">
+                                <span class="data-label">Tareas de Acondicionamiento</span>
+                                <span class="data-value" style="color: #166534; font-weight: 600;">✓ Secado térmico &bull; ✓ Zarandeo / Limpieza &bull; ✓ Fumigación reglamentaria</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- HITO 3: FISCALIZACIÓN OFICIAL SENASA Y NOTARIZACIÓN BFA ---
+        if (lote.bfaHash || lote.inspeccionSenasa || ['VALIDADO_SENASA', 'EN_TRANSITO_PUERTO', 'ARRIBADO_PUERTO', 'EXPORTADO'].includes(estado)) {
+            const insp = lote.inspeccionSenasa || {};
+            html += `
+                <div class="timeline-item">
+                    <div class="content">
+                        <div class="badges-container">
+                            <span class="badge bfa">3. Fiscalización SENASA</span>
+                            <span class="badge" style="background: #ecfdf5; color: #065f46;">🛡️ Certificado Oficial</span>
+                        </div>
+                        <h3>Momento de Emisión del Certificado de SENASA (Notarización BFA)</h3>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px;">
+                            Con el grano ingresado a la planta y sometido a acondicionamiento, el inspector de SENASA valida el lote físico y estampa la conformidad fitosanitaria oficial en la Blockchain Federal Argentina.
+                        </p>
+                        <div class="data-grid" style="margin-bottom: 10px;">
+                            <div class="data-row">
+                                <span class="data-label">Condición Cuarentenaria</span>
+                                <span class="data-value" style="color: #166534; font-weight: 700;">✓ Libre de plagas cuarentenarias / gorgojo vivo</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Inspector Actuante</span>
+                                <span class="data-value">${insp.inspector || 'SENASA / ARCA Fiscalización'}</span>
+                            </div>
+                        </div>
+                        ${lote.bfaHash ? `
+                            <div class="hash-container">
+                                <span class="hash-label">Sello Notarial BFA SHA-256 (Evidencia Inmutable):</span>
+                                <span class="hash">${lote.bfaHash}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- HITO 4: CPE DE TRASLADO Y FLETE LARGO A PUERTO (TRAMO 2) ---
+        const cpe = lote.cpeTraslado;
+        if (cpe || ['EN_TRANSITO_PUERTO', 'ARRIBADO_PUERTO', 'EXPORTADO'].includes(estado)) {
+            const puertoDestino = cpe ? cpe.destinoPuerto : 'Puerto de Bahía Blanca';
+            html += `
+                <div class="timeline-item">
+                    <div class="content">
+                        <div class="badges-container">
+                            <span class="badge" style="background: #fef3c7; color: #92400e;">4. Tramo 2 - Flete Largo</span>
+                            <span class="badge" style="background: #e0f2fe; color: #0369a1;">${puertoDestino}</span>
+                        </div>
+                        <h3>Momento de Transporte hacia la Terminal Portuaria</h3>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px;">
+                            Traslado autorizado: El lote consolidado cuenta con calidad validada, notarización oficial BFA y emisión de una nueva Carta de Porte Electrónica (CPE) de traslado con destino específico al puerto.
+                        </p>
+                        <div class="data-grid">
+                            <div class="data-row">
+                                <span class="data-label">Nueva CPE de Traslado</span>
+                                <span class="data-value"><strong>${cpe ? cpe.numeroCPE : 'CPE-TL-OFICIAL'}</strong> (CTG: ${cpe && cpe.ctg ? cpe.ctg : '12345678'})</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Destino Portuario Específico</span>
+                                <span class="data-value" style="color: #0284c7; font-weight: 700;">${puertoDestino}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Transportista Asignado</span>
+                                <span class="data-value">${cpe ? cpe.transportista : 'Logística Portuaria S.A.'}</span>
+                            </div>
+                            <div class="data-row">
+                                <span class="data-label">Patente Camión / Convoy</span>
+                                <span class="data-value">${cpe ? cpe.patenteCamion : 'AA 123 CD'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- HITO 5: RECEPCIÓN PORTUARIA Y HABILITACIÓN PARA EMBARQUE ---
+        const arribo = lote.arriboPuerto;
+        if (arribo || ['ARRIBADO_PUERTO', 'EXPORTADO'].includes(estado) || lote.auditoriaEmbarque) {
+            const aud = lote.auditoriaEmbarque || {};
+            const checks = aud.checks || {};
+            const c1 = arribo && arribo.cpeDescargaConfirmada || estado === 'ARRIBADO_PUERTO' || estado === 'EXPORTADO';
+            const c2 = !!lote.bfaHash;
+            const c3 = Array.isArray(origenes) && origenes.length > 0 && origenes.every(o => o.renspa);
+            const habilitadoEmbarque = c1 && c2 && c3;
+
+            html += `
+                <div class="timeline-item">
+                    <div class="content">
+                        <div class="badges-container">
+                            <span class="badge" style="background: #f3e8ff; color: #6b21a8;">5. Terminal Portuaria</span>
+                            <span class="badge" style="background: ${habilitadoEmbarque ? '#dcfce7' : '#fee2e2'}; color: ${habilitadoEmbarque ? '#166534' : '#991b1b'}; font-weight: 700;">
+                                ${habilitadoEmbarque ? '✓ Habilitado para Embarque' : '⏳ Pendiente de Habilitación'}
+                            </span>
+                        </div>
+                        <h3>Recepción en Puerto y Habilitación para Embarque</h3>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px;">
+                            En la terminal portuaria, el pedido se habilita para embarque únicamente cumpliendo concurrentemente con las 3 condiciones reglamentarias:
+                        </p>
+                        
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:1.1rem;">${c1 ? '✅' : '❌'}</span>
+                                <div><strong>Condición 1:</strong> Arribo y confirmación definitiva de la CPE de descarga (${c1 ? 'Confirmada' : 'Pendiente'}).</div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:1.1rem;">${c2 ? '✅' : '❌'}</span>
+                                <div><strong>Condición 2:</strong> Sellado de tiempo y hash inmutable de SENASA/AFIP comprobable en BFA (${c2 ? 'Comprobable' : 'Sin Sello'}).</div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:1.1rem;">${c3 ? '✅' : '❌'}</span>
+                                <div><strong>Condición 3:</strong> Acreditación estricta de trazabilidad de masa hacia atrás (${c3 ? `${origenes.length} orígenes con RENSPA auditados` : 'Incompleto'}).</div>
+                            </div>
+                        </div>
+
+                        ${arribo ? `
+                            <div class="data-grid">
+                                <div class="data-row">
+                                    <span class="data-label">Terminal Portuaria</span>
+                                    <span class="data-value">${arribo.terminal || 'Terminal Bahía Blanca'}</span>
+                                </div>
+                                <div class="data-row">
+                                    <span class="data-label">Balanza de Puerto</span>
+                                    <span class="data-value">${arribo.balanzaPuertoTN || volTotal} TN</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- ALERTA FITOSANITARIA (SI ESTÁ BLOQUEADO) ---
+        if (estado === 'BLOQUEADO') {
+            const bloqueoTx = lote.historialTransacciones && lote.historialTransacciones.find(t => t.accion === 'CAMBIO_ESTADO: BLOQUEADO');
+            const motivoBloqueo = bloqueoTx ? bloqueoTx.detalles : 'Medida cautelar preventiva por organismo de control.';
+            html += `
+                <div class="timeline-item">
+                    <div class="content" style="border-left: 4px solid #dc2626; background: #fef2f2;">
+                        <div class="badges-container">
+                            <span class="badge" style="background: #dc2626; color: white; font-weight: 700;">⛔ Alerta Fitosanitaria Oficial</span>
+                        </div>
+                        <h3 style="color: #dc2626;">Lote Inmovilizado Cautelarmente en Ledger</h3>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px; color: #7f1d1d;">
+                            El organismo de control (SENASA / ARCA) ha suspendido el tránsito y comercialización de este lote.
+                        </p>
+                        <div class="data-grid">
+                            <div class="data-row" style="grid-column: span 2;">
+                                <span class="data-label">Motivo Fitosanitario</span>
+                                <span class="data-value" style="color: #b91c1c; font-weight: 600;">${motivoBloqueo}</span>
+                            </div>
+                            ${bloqueoTx && bloqueoTx.fecha ? `
+                            <div class="data-row">
+                                <span class="data-label">Fecha y Hora de Bloqueo</span>
+                                <span class="data-value">${new Date(bloqueoTx.fecha).toLocaleString('es-AR')}</span>
                             </div>` : ''}
                         </div>
                     </div>
@@ -289,55 +476,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
         }
 
-        // --- HITO 3: ACOPIO Y ACONDICIONAMIENTO EN PLANTA ---
-        const acopioTx = lote.historialTransacciones && lote.historialTransacciones.find(t => 
-            t.accion === 'CAMBIO_ESTADO: ACONDICIONADO' || t.accion === 'ACOPIO_Y_MEZCLA'
-        );
-        if (acopioTx || estado === 'ACONDICIONADO' || estado === 'EXPORTADO' || esMezcla) {
-            let detallesText = acopioTx ? (acopioTx.detalles || 'Pesaje y acondicionamiento completados.') : `Consolidación en Silo: ${volTotal} TN`;
-            html += `
-                <div class="timeline-item">
-                    <div class="content">
-                        <div class="badges-container">
-                            <span class="badge" style="background: #d9f99d; color: #3f6212;">3. Acopio y Acondicionamiento</span>
-                        </div>
-                        <h3>Planta Receptora / Silo Consolidado</h3>
-                        <p style="font-size: 0.9rem; margin-bottom: 12px;">Recepción en silos, calibración de humedad y pesaje en balanza oficial homologada.</p>
-                        <div class="data-grid">
-                            <div class="data-row">
-                                <span class="data-label">Parámetros Registrados</span>
-                                <span class="data-value">${detallesText}</span>
-                            </div>
-                            <div class="data-row">
-                                <span class="data-label">Ubicación de Planta</span>
-                                <span class="data-value">Bahía Blanca / Nodo Portuario Agroindustrial</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // --- HITO 4: NOTARIZACIÓN ESTATAL (BFA) ---
-        if (lote.bfaHash) {
-            html += `
-                <div class="timeline-item">
-                    <div class="content">
-                        <div class="badges-container">
-                            <span class="badge bfa">4. Notarización Estatal</span>
-                        </div>
-                        <h3>SENASA / ARCA / BFA</h3>
-                        <p style="font-size: 0.9rem; margin-bottom: 12px;">Sello de tiempo criptográfico inmutable estampado en la Blockchain Federal Argentina.</p>
-                        <div class="hash-container">
-                            <span class="hash-label">BFA Hash SHA-256 (Evidencia Inmutable):</span>
-                            <span class="hash">${lote.bfaHash}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // --- HITO 5: CERTIFICADO DE EXPORTACIÓN (NFT) ---
+        // --- HITO 6: CIERRE LOGÍSTICO Y TOKENIZACIÓN NFT (POLYGON / HARDHAT) ---
         const exportTx = lote.historialTransacciones && lote.historialTransacciones.find(t => t.accion === 'CAMBIO_ESTADO: EXPORTADO');
         if (exportTx || effectiveTxHash || estado === 'EXPORTADO') {
             const displayTx = effectiveTxHash || (exportTx && exportTx.detalles && exportTx.detalles.match(/TX:\s*(0x[a-fA-F0-9]+)/) ? exportTx.detalles.match(/TX:\s*(0x[a-fA-F0-9]+)/)[1] : '0x7a3f89b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9');
@@ -346,10 +485,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="timeline-item">
                     <div class="content">
                         <div class="badges-container">
-                            <span class="badge polygon">5. Certificado Digital NFT</span>
+                            <span class="badge polygon">6. Tokenización ERC-721</span>
+                            <span class="badge" style="background: #10b981; color: white;">Cierre Logístico</span>
                         </div>
-                        <h3>Exportación Internacional (EVM / Polygon)</h3>
-                        <p style="font-size: 0.9rem; margin-bottom: 12px;">Tokenización del lote final mediante contrato inteligente ERC-721 para comercialización exterior.</p>
+                        <h3>Despacho de Exportación y Emisión de NFT Inmutable</h3>
+                        <p style="font-size: 0.9rem; margin-bottom: 12px;">Tokenización del lote habilitado mediante contrato inteligente ERC-721 en red EVM (Hardhat/Polygon) para comercialización internacional.</p>
                         <div class="data-grid" style="margin-bottom: 8px;">
                             <div class="data-row">
                                 <span class="data-label">Contrato NFT</span>

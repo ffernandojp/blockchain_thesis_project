@@ -349,6 +349,30 @@ a.view-link:hover {
     border: 1px solid #93c5fd;
 }
 
+.status-recepcionado {
+    background: #f0fdfa;
+    color: #0f766e;
+    border: 1px solid #5eead4;
+}
+
+.status-validado-senasa {
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #7dd3fc;
+}
+
+.status-transito-puerto {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+}
+
+.status-arribado-puerto {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #c4b5fd;
+}
+
 .status-en-transito {
     background: #fefce8;
     color: #854d0e;

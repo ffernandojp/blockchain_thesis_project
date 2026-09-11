@@ -75,7 +75,7 @@ async function runBusinessRulesTests() {
     const siloMezcla = fabricLedger.procesarAcopioYMezcla('SILO-MEZCLA-VALIDO-1', ['CAMION-PRUEBA-01', 'CAMION-PRUEBA-02']);
     assert.strictEqual(siloMezcla.id, 'SILO-MEZCLA-VALIDO-1');
     assert.strictEqual(siloMezcla.volumenToneladas, 79.42);
-    assert.strictEqual(siloMezcla.estado, 'ACONDICIONADO');
+    assert(['ACOPIADO_ACONDICIONADO', 'ACONDICIONADO'].includes(siloMezcla.estado));
     console.log(`✅ Silo consolidado exitosamente: ${siloMezcla.id} con ${siloMezcla.volumenToneladas} TN.`);
 
     // Precursores mutaron a MEZCLADO_ACONDICIONADO
@@ -88,7 +88,7 @@ async function runBusinessRulesTests() {
     // --- REGLA 2: AUDITORÍA Y CERTIFICACIÓN EN SENASA ---
     console.log('\n--- TEST 6: Simulación de Búsqueda SENASA (Exclusión de MEZCLADO_ACONDICIONADO) ---');
     const todos = fabricLedger.obtenerTodosLotes();
-    const activosSenasa = todos.filter(l => l.estado === 'ACONDICIONADO');
+    const activosSenasa = todos.filter(l => l.estado === 'ACOPIADO_ACONDICIONADO' || l.estado === 'ACONDICIONADO');
 
     // SILO-MEZCLA-VALIDO-1 debe estar presente
     assert(activosSenasa.some(l => l.id === 'SILO-MEZCLA-VALIDO-1'), 'SILO-MEZCLA-VALIDO-1 debe estar en la lista de activos');
@@ -101,11 +101,11 @@ async function runBusinessRulesTests() {
     // --- TEST 7: Re-consolidación a nivel superior y verificación de estado terminal ---
     console.log('\n--- TEST 7: Re-consolidación a Nivel Superior (SILO 1 -> SILO FINAL) ---');
     fabricLedger.registrarCosechaPrimaria('CAMION-PRUEBA-03', '01.002.0.00345/00', 'Lat: -34.60, Lon: -58.38', 20.58, 'cid3');
-    fabricLedger.actualizarEstadoLogistico('CAMION-PRUEBA-03', 'ACONDICIONADO', 'Acopiador', 'Pesaje: 20.58TN.');
+    fabricLedger.actualizarEstadoLogistico('CAMION-PRUEBA-03', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 20.58TN.');
 
     const siloFinal = fabricLedger.procesarAcopioYMezcla('SILO-FINAL-EXPORT-100', ['SILO-MEZCLA-VALIDO-1', 'CAMION-PRUEBA-03']);
     assert.strictEqual(siloFinal.volumenToneladas, 100.0);
-    assert.strictEqual(siloFinal.estado, 'ACONDICIONADO');
+    assert(['ACOPIADO_ACONDICIONADO', 'ACONDICIONADO'].includes(siloFinal.estado));
 
     // Ahora SILO-MEZCLA-VALIDO-1 mutó a MEZCLADO_ACONDICIONADO
     const siloIntermedioConsumido = fabricLedger.obtenerLote('SILO-MEZCLA-VALIDO-1');
@@ -113,7 +113,7 @@ async function runBusinessRulesTests() {
     console.log(`✅ SILO-MEZCLA-VALIDO-1 mutó a MEZCLADO_ACONDICIONADO tras re-fusión.`);
 
     // SILO-MEZCLA-VALIDO-1 ya no debe estar en activos
-    const activosSenasaPost = fabricLedger.obtenerTodosLotes().filter(l => l.estado === 'ACONDICIONADO');
+    const activosSenasaPost = fabricLedger.obtenerTodosLotes().filter(l => l.estado === 'ACOPIADO_ACONDICIONADO' || l.estado === 'ACONDICIONADO');
     assert(!activosSenasaPost.some(l => l.id === 'SILO-MEZCLA-VALIDO-1'), 'SILO-MEZCLA-VALIDO-1 debe haber desaparecido de la lista activa');
     assert(activosSenasaPost.some(l => l.id === 'SILO-FINAL-EXPORT-100'), 'SILO-FINAL-EXPORT-100 debe ser la única partida activa resultante');
     console.log('✅ Lista de auditoría de SENASA actualizada: solo exhibe la partida final SILO-FINAL-EXPORT-100.');

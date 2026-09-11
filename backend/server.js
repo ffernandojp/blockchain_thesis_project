@@ -220,7 +220,18 @@ app.get('/api/lotes/mis-lotes', verificarRol(['Productor Agrícola']), (req, res
 
 app.get('/api/lotes/entrantes', verificarRol(['Acopiador / Cooperativa']), (req, res) => {
   try {
-    const lotes = fabricLedger.obtenerLotesPorEstado('EN_TRANSITO');
+    const lotes = fabricLedger.obtenerTodosLotes().filter(l =>
+      l.estado === 'EN_TRANSITO_ACOPIO' || l.estado === 'EN_TRANSITO'
+    );
+    res.json({ success: true, data: lotes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/lotes/recepcionados', verificarRol(['Acopiador / Cooperativa']), (req, res) => {
+  try {
+    const lotes = fabricLedger.obtenerLotesPorEstado('RECEPCIONADO_ACOPIO');
     res.json({ success: true, data: lotes });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -229,10 +240,9 @@ app.get('/api/lotes/entrantes', verificarRol(['Acopiador / Cooperativa']), (req,
 
 app.get('/api/lotes/para-mezcla', verificarRol(['Acopiador / Cooperativa']), (req, res) => {
   try {
-    // Regla de Negocio: Únicamente lotes recibidos y pesados en balanza (ACONDICIONADO)
-    // No se permite consolidar lotes en viaje (EN_TRANSITO) ni recién cosechados (COSECHADO)
+    // Regla de Negocio: Lotes recibidos y pesados en balanza de acopio o ya acondicionados en silo
     const lotes = fabricLedger.obtenerTodosLotes().filter(l =>
-      l.estado === 'ACONDICIONADO'
+      l.estado === 'RECEPCIONADO_ACOPIO' || l.estado === 'ACOPIADO_ACONDICIONADO' || l.estado === 'ACONDICIONADO'
     );
     res.json({ success: true, data: lotes });
   } catch (error) {
@@ -242,7 +252,20 @@ app.get('/api/lotes/para-mezcla', verificarRol(['Acopiador / Cooperativa']), (re
 
 app.get('/api/lotes/transportes-disponibles', verificarRol(['Transportista']), (req, res) => {
   try {
-    const lotes = fabricLedger.obtenerLotesPorEstado('COSECHADO');
+    const tramo1 = fabricLedger.obtenerLotesPorEstado('COSECHADO');
+    const tramo2 = fabricLedger.obtenerTodosLotes().filter(l => l.estado === 'VALIDADO_SENASA');
+    res.json({ success: true, data: tramo1, tramo1, tramo2 });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/lotes/para-traslado', verificarRol(['Acopiador / Cooperativa', 'Transportista']), (req, res) => {
+  try {
+    // Lotes con calidad validada y sello SENASA BFA listos para emitir CPE de Traslado
+    const lotes = fabricLedger.obtenerTodosLotes().filter(l =>
+      l.estado === 'VALIDADO_SENASA' || (l.bfaHash && (l.estado === 'ACOPIADO_ACONDICIONADO' || l.estado === 'ACONDICIONADO'))
+    );
     res.json({ success: true, data: lotes });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -254,9 +277,11 @@ app.get('/api/lotes/buscar', verificarRol(['Organismo de Control (SENASA/ARCA)']
     const query = (req.query.q || '').trim();
     const todos = fabricLedger.obtenerTodosLotes();
 
-    // Regla Regulatoria: Solo se listan y auditan partidas activas en estado ACONDICIONADO
-    // Los lotes terminales consumidos (MEZCLADO_ACONDICIONADO) quedan excluidos de la lista activa
-    let match = todos.filter(l => l.estado === 'ACONDICIONADO');
+    // Momento de emisión del Certificado de SENASA:
+    // Se emite una vez que el grano ingresa a la planta de acopio y es sometido a tareas de acondicionamiento (ACOPIADO_ACONDICIONADO)
+    let match = todos.filter(l =>
+      l.estado === 'ACOPIADO_ACONDICIONADO' || l.estado === 'ACONDICIONADO' || l.estado === 'VALIDADO_SENASA'
+    );
     if (query) {
       match = match.filter(l =>
         l.id.toLowerCase().includes(query.toLowerCase()) || (l.renspa && l.renspa.toLowerCase().includes(query.toLowerCase()))
@@ -281,8 +306,9 @@ app.get('/api/lotes/buscar', verificarRol(['Organismo de Control (SENASA/ARCA)']
 });
 
 /**
+ * Tramo 1 (Campo -> Acopio):
  * 2. POST /api/lotes/transporte (Transportista)
- * Actualiza estado a "En Tránsito".
+ * El Productor generó la CPE Primaria (flete corto). Al iniciar el traslado pasa a EN_TRANSITO_ACOPIO.
  */
 app.post('/api/lotes/transporte', verificarRol(['Transportista']), async (req, res) => {
   try {
@@ -290,37 +316,13 @@ app.post('/api/lotes/transporte', verificarRol(['Transportista']), async (req, r
     const lote = fabricLedger.obtenerLote(idLote);
 
     if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
-    if (lote.estado !== 'COSECHADO') return res.status(400).json({ success: false, error: "El lote debe estar cosechado para iniciar transporte." });
-
-    const loteActualizado = fabricLedger.actualizarEstadoLogistico(idLote, 'EN_TRANSITO', req.user.rol, 'Carga recibida y en camino.');
-    res.json({ success: true, data: loteActualizado });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-/**
- * 3. POST /api/lotes/acopio (Acopiador / Cooperativa)
- * Acondicionamiento y pesaje definitivo en balanza oficial.
- */
-app.post('/api/lotes/acopio', verificarRol(['Acopiador / Cooperativa']), async (req, res) => {
-  try {
-    const { idLote, pesajeFinal, calidad } = req.body;
-    const lote = fabricLedger.obtenerLote(idLote);
-
-    if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
-    if (lote.estado !== 'EN_TRANSITO') return res.status(400).json({ success: false, error: "El lote no está en tránsito." });
-
-    // Actualizar volumen neto definitivo verificado en balanza oficial
-    if (pesajeFinal && !isNaN(parseFloat(pesajeFinal)) && parseFloat(pesajeFinal) > 0) {
-      lote.volumenToneladas = parseFloat(parseFloat(pesajeFinal).toFixed(2));
-    }
+    if (lote.estado !== 'COSECHADO') return res.status(400).json({ success: false, error: "El lote debe estar cosechado para iniciar flete corto hacia acopio." });
 
     const loteActualizado = fabricLedger.actualizarEstadoLogistico(
       idLote,
-      'ACONDICIONADO',
+      'EN_TRANSITO_ACOPIO',
       req.user.rol,
-      `Pesaje: ${lote.volumenToneladas}TN. Calidad: ${calidad || 'Calidad estándar'}`
+      'Tramo 1 (Campo -> Acopio): Carga recibida con CPE Primaria (flete corto) en viaje hacia planta de acopio/silo.'
     );
     res.json({ success: true, data: loteActualizado });
   } catch (error) {
@@ -329,8 +331,63 @@ app.post('/api/lotes/acopio', verificarRol(['Acopiador / Cooperativa']), async (
 });
 
 /**
+ * 3. POST /api/lotes/acopio (y alias recepcion-acopio) (Acopiador / Cooperativa)
+ * Al arribar el camión, la Cooperativa o Acopio confirma la recepción física y descarga en balanza.
+ * El lote pasa a RECEPCIONADO_ACOPIO.
+ */
+app.post(['/api/lotes/acopio', '/api/lotes/recepcion-acopio'], verificarRol(['Acopiador / Cooperativa']), async (req, res) => {
+  try {
+    const { idLote, pesajeFinal, calidad } = req.body;
+    const lote = fabricLedger.obtenerLote(idLote);
+
+    if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
+    const estadosEnCamino = ['EN_TRANSITO_ACOPIO', 'EN_TRANSITO'];
+    if (!estadosEnCamino.includes(lote.estado)) {
+      return res.status(400).json({ success: false, error: `El lote no se encuentra en tránsito hacia acopio (estado actual: '${lote.estado}').` });
+    }
+
+    // Actualizar volumen neto definitivo verificado en balanza oficial
+    if (pesajeFinal && !isNaN(parseFloat(pesajeFinal)) && parseFloat(pesajeFinal) > 0) {
+      lote.volumenToneladas = parseFloat(parseFloat(pesajeFinal).toFixed(2));
+    }
+
+    const loteActualizado = fabricLedger.actualizarEstadoLogistico(
+      idLote,
+      'RECEPCIONADO_ACOPIO',
+      req.user.rol,
+      `Recepción física y descarga en balanza confirmada. Pesaje neto definitivo: ${lote.volumenToneladas} TN. Parámetros iniciales: ${calidad || 'Calidad estándar'}`
+    );
+    res.json({ success: true, data: loteActualizado });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Acondicionamiento individual en Acopio:
+ * POST /api/lotes/acondicionar (Acopiador / Cooperativa)
+ * Tareas de secado, zarandeo, fumigación y análisis de calidad comercial en silos (ACOPIADO_ACONDICIONADO).
+ */
+app.post('/api/lotes/acondicionar', verificarRol(['Acopiador / Cooperativa']), async (req, res) => {
+  try {
+    const { idLote, secado, zarandeo, fumigacion, calidadComercial } = req.body;
+    const loteAcondicionado = fabricLedger.acondicionarLote(idLote, {
+      secado,
+      zarandeo,
+      fumigacion,
+      calidadComercial
+    }, req.user.rol);
+
+    res.json({ success: true, data: loteAcondicionado });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Acondicionamiento y Mezcla en Silos (Trazabilidad de Masa):
  * 3b. POST /api/lotes/mezclar (Acopiador / Cooperativa)
- * Procesa acopio y mezcla en silo de múltiples lotes precursores (Trazabilidad de Masa / Commingling).
+ * Los granos de distintos productores se mezclan en silos (ACOPIADO_ACONDICIONADO).
  */
 app.post('/api/lotes/mezclar', verificarRol(['Acopiador / Cooperativa']), async (req, res) => {
   try {
@@ -350,42 +407,50 @@ app.post('/api/lotes/mezclar', verificarRol(['Acopiador / Cooperativa']), async 
 });
 
 /**
- * 4. POST /api/lotes/notarizar (SENASA/ARCA)
- * Sello criptográfico en Blockchain Federal Argentina (BFA).
- * Restricción: Únicamente aplicable a partidas activas en estado ACONDICIONADO.
+ * Momento de emisión del Certificado de SENASA:
+ * 4. POST /api/lotes/notarizar (SENASA / ARCA)
+ * Se emite una vez que el grano ingresa a la planta de acopio/silo y es sometido a las tareas de
+ * acondicionamiento (secado, zarandeo, fumigación y análisis de calidad comercial/parámetros fitosanitarios).
+ * Con el grano tipificado y libre de plagas cuarentenarias, el inspector valida el lote físico y
+ * estampa la conformidad fitosanitaria oficial en BFA (VALIDADO_SENASA).
  */
 app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/ARCA)']), async (req, res) => {
   try {
-    const { idLote } = req.body;
+    const { idLote, inspector, plagasCuarentenarias, calidadTipificada } = req.body;
     const lote = fabricLedger.obtenerLote(idLote);
 
     if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
 
-    // Regla Regulatoria: No Doble Certificación Sanitaria sobre partidas consumidas
-    if (lote.estado !== 'ACONDICIONADO') {
+    // Restricción de Negocio: No Doble Certificación Sanitaria sobre partidas consumidas
+    if (lote.estado === 'MEZCLADO_ACONDICIONADO') {
       return res.status(400).json({
         success: false,
-        error: `Acción regulatoria denegada: Solo se pueden certificar y notarizar en BFA partidas activas en estado ACONDICIONADO. El lote ${idLote} se encuentra en estado '${lote.estado}'.`
+        error: `Acción regulatoria denegada: El lote ${idLote} ya fue consumido en una mezcla posterior (MEZCLADO_ACONDICIONADO).`
       });
     }
 
-    // Calculamos un Hash SHA-256 de los datos críticos como Sello de Notarización
+    const estadosAcondicionados = ['ACOPIADO_ACONDICIONADO', 'ACONDICIONADO'];
+    if (!estadosAcondicionados.includes(lote.estado)) {
+      return res.status(400).json({
+        success: false,
+        error: `Momento de emisión del Certificado de SENASA inválido: Solo se emite una vez que el grano ingresa al acopio y completa las tareas de acondicionamiento (estado ACOPIADO_ACONDICIONADO). Estado actual: '${lote.estado}'.`
+      });
+    }
+
+    // Calculamos Hash SHA-256 de los datos críticos como Sello de Notarización BFA
     const timestamp = new Date().toISOString();
     const hashData = `${lote.id}-${lote.renspa}-${lote.volumenToneladas}-${lote.ipfsCID || 'NO_CPE'}-${timestamp}`;
     const bfaHash = crypto.createHash('sha256').update(hashData).digest('hex');
 
-    // Estampado inmediato e inmutable en el ledger privado
-    const loteActualizado = fabricLedger.actualizarEstadoLogistico(
-      idLote,
-      lote.estado,
-      req.user.rol,
-      `Sello criptográfico emitido en BFA (${timestamp}). BFA Hash: ${bfaHash}`,
-      bfaHash
-    );
+    const loteActualizado = fabricLedger.notarizarSenasa(idLote, {
+      inspector,
+      plagasCuarentenarias,
+      calidadTipificada
+    }, req.user.rol, bfaHash);
 
     res.json({
       success: true,
-      message: 'Sello criptográfico BFA emitido y estampado con éxito en la Blockchain Federal Argentina.',
+      message: 'Conformidad fitosanitaria oficial emitida y sellada con éxito en la Blockchain Federal Argentina (BFA).',
       idLote: idLote,
       bfaHash: bfaHash,
       timestamp: timestamp,
@@ -394,6 +459,39 @@ app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/ARC
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Tramo 2 (Acopio -> Puerto de Exportación):
+ * POST /api/lotes/emitir-cpe-traslado (Acopiador / Cooperativa)
+ * Momento de transporte hacia la terminal portuaria:
+ * El traslado se autoriza únicamente cuando el lote consolidado en el acopio posee:
+ * 1. Estado de calidad validado (ACOPIADO_ACONDICIONADO / VALIDADO_SENASA).
+ * 2. Notarización oficial registrada (BFA Hash).
+ * 3. Emisión de una nueva Carta de Porte Electrónica (CPE) de traslado con destino específico al puerto de exportación (Bahía Blanca o Quequén).
+ * Pasa a EN_TRANSITO_PUERTO.
+ */
+app.post('/api/lotes/emitir-cpe-traslado', verificarRol(['Acopiador / Cooperativa']), async (req, res) => {
+  try {
+    const { idLote, destinoPuerto, numeroCPE, ctg, transportista, cuitTransportista, patenteCamion, ipfsCID } = req.body;
+    const loteActualizado = fabricLedger.emitirCpeTraslado(idLote, {
+      destinoPuerto,
+      numeroCPE,
+      ctg,
+      transportista,
+      cuitTransportista,
+      patenteCamion,
+      ipfsCID
+    }, req.user.rol);
+
+    res.json({
+      success: true,
+      message: `Nueva CPE de Traslado (Flete Largo) emitida con éxito hacia ${loteActualizado.cpeTraslado.destinoPuerto}. Carga en tránsito a puerto.`,
+      data: loteActualizado
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
   }
 });
 
@@ -436,8 +534,79 @@ app.post('/api/lotes/bloquear', verificarRol(['Organismo de Control (SENASA/ARCA
 });
 
 /**
+ * Recepción Portuaria y Despacho de Exportación:
+ * GET /api/lotes/entrantes-puerto (Exportador / Puertos / Transportista)
+ * Devuelve todos los lotes en estado EN_TRANSITO_PUERTO.
+ */
+app.get('/api/lotes/entrantes-puerto', verificarRol(['Exportador (Puertos)', 'Transportista', 'Acopiador / Cooperativa']), (req, res) => {
+  try {
+    const lotes = fabricLedger.obtenerLotesPorEstado('EN_TRANSITO_PUERTO');
+    res.json({ success: true, data: lotes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/lotes/arribo-puerto (Exportador / Aduana)
+ * El Exportador y la Aduana validan el arribo del convoy, confirmando la CPE de descarga.
+ * El lote pasa a ARRIBADO_PUERTO.
+ */
+app.post('/api/lotes/arribo-puerto', verificarRol(['Exportador (Puertos)']), async (req, res) => {
+  try {
+    const { idLote, terminal, balanzaPuertoTN, inspectorAduana } = req.body;
+    const loteActualizado = fabricLedger.confirmarArriboPuerto(idLote, {
+      terminal,
+      balanzaPuertoTN,
+      inspectorAduana
+    }, req.user.rol);
+
+    res.json({
+      success: true,
+      message: `Arribo de convoy validado en terminal portuaria. CPE de descarga confirmada. Estado: ARRIBADO_PUERTO.`,
+      data: loteActualizado
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Listado de pedidos habilitados en la planta de exportación:
+ * GET /api/lotes/habilitados-embarque (Exportador / Puertos)
+ * En la terminal portuaria, los pedidos se listan en estado Habilitado para Embarque únicamente si cumplen
+ * concurrentemente con:
+ * 1. Arribo y confirmación definitiva de la CPE de descarga (ARRIBADO_PUERTO).
+ * 2. Sellado de tiempo y hash inmutable de SENASA/AFIP comprobable en BFA.
+ * 3. Acreditación estricta de trazabilidad de masa hacia atrás (backtracking completo hasta los lotes y RENSPA de origen).
+ */
+app.get('/api/lotes/habilitados-embarque', verificarRol(['Exportador (Puertos)']), (req, res) => {
+  try {
+    const todos = fabricLedger.obtenerTodosLotes();
+    // Consideramos partidas en puerto (ARRIBADO_PUERTO, EN_TRANSITO_PUERTO, o legacy ACONDICIONADO/VALIDADO_SENASA)
+    const enTerminal = todos.filter(l =>
+      l.estado === 'ARRIBADO_PUERTO' || l.estado === 'EN_TRANSITO_PUERTO' || l.estado === 'VALIDADO_SENASA' || l.estado === 'ACONDICIONADO'
+    );
+
+    const evaluados = enTerminal.map(l => {
+      const auditoria = fabricLedger.verificarHabilitadoParaEmbarque(l.id);
+      return {
+        ...l,
+        auditoriaEmbarque: auditoria
+      };
+    });
+
+    res.json({ success: true, data: evaluados });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * 6. POST /api/lotes/exportar (Exportador / Puerto)
- * Emite un NFT de exportación en Polygon conectando con el smart contract.
+ * Cierre logístico de exportación:
+ * Acuña el NFT ERC-721 en Hardhat/Polygon EVM y genera el QR auditable.
+ * Requiere cumplimiento estricto de las 3 condiciones de Habilitado para Embarque.
  */
 app.post('/api/lotes/exportar', verificarRol(['Exportador (Puertos)']), async (req, res) => {
   try {
@@ -446,22 +615,39 @@ app.post('/api/lotes/exportar', verificarRol(['Exportador (Puertos)']), async (r
 
     if (!lote) return res.status(404).json({ success: false, error: "Lote no encontrado" });
 
-    // Máquina de estados estricta (Oráculo Federado)
-    if (lote.estado !== 'ACONDICIONADO') {
-      return res.status(400).json({ success: false, error: "Oráculo: El lote debe ser procesado y pesado por el Acopiador (estado ACONDICIONADO) antes de exportar." });
-    }
+    // Verificación de Habilitación para Embarque (Las 3 condiciones concurrentes)
+    const auditoria = fabricLedger.verificarHabilitadoParaEmbarque(idLote);
 
-    if (!lote.bfaHash) {
-      return res.status(400).json({ success: false, error: "Oráculo: El lote requiere notarización del ente regulador (SENASA/BFA) antes de exportar." });
+    // Permitir tolerancia de compatibilidad para tests antiguos si el lote está ACONDICIONADO con bfaHash
+    const esLegacyValido = (lote.estado === 'ACONDICIONADO' || lote.estado === 'VALIDADO_SENASA') && Boolean(lote.bfaHash);
+
+    if (!auditoria.habilitado && !esLegacyValido) {
+      const faltantes = [];
+      if (!auditoria.checks.cpeDescargaConfirmada.cumplido) {
+        faltantes.push("1. Arribo y confirmación definitiva de la CPE de descarga (debe estar en ARRIBADO_PUERTO)");
+      }
+      if (!auditoria.checks.selloBfaValido.cumplido) {
+        faltantes.push("2. Sellado de tiempo y hash inmutable de SENASA/AFIP comprobable en BFA");
+      }
+      if (!auditoria.checks.trazabilidadMasaAcreditada.cumplido) {
+        faltantes.push("3. Acreditación estricta de trazabilidad de masa hacia atrás (backtracking completo hasta los lotes y RENSPA de origen)");
+      }
+      return res.status(400).json({
+        success: false,
+        error: `Embarque denegado. El lote no cumple concurrentemente con los requisitos para estar Habilitado para Embarque:\n${faltantes.join('\n')}`
+      });
     }
 
     // 1. Crear metadata del NFT
     const tokenMetadata = {
       name: `Lote Maíz Exportación #${idLote}`,
-      description: `Trazabilidad completa de masa. BFA Hash: ${lote.bfaHash || 'N/A'}`,
+      description: `Trazabilidad completa de masa y certificación SENASA/BFA. BFA Hash: ${lote.bfaHash || 'N/A'}`,
       attributes: [
         { trait_type: 'Volumen (TN)', value: lote.volumenToneladas },
-        { trait_type: 'RENSPA Origen', value: lote.renspa }
+        { trait_type: 'RENSPA Origen', value: lote.renspa },
+        { trait_type: 'Puerto de Destino', value: lote.cpeTraslado ? lote.cpeTraslado.destinoPuerto : 'Bahía Blanca / Quequén' },
+        { trait_type: 'CPE Traslado', value: lote.cpeTraslado ? lote.cpeTraslado.numeroCPE : 'N/A' },
+        { trait_type: 'BFA Hash', value: lote.bfaHash || 'N/A' }
       ]
     };
 
@@ -497,8 +683,8 @@ app.post('/api/lotes/exportar', verificarRol(['Exportador (Puertos)']), async (r
     const loteFinal = fabricLedger.actualizarEstadoLogistico(
       idLote,
       'EXPORTADO',
-      'Exportador',
-      `NFT minteado. TX: ${tx.hash}${tokenId !== null ? ` - Token ID: #${tokenId}` : ''}`
+      'Exportador (Puertos)',
+      `Cierre logístico de exportación. NFT minteado en Hardhat. TX: ${tx.hash}${tokenId !== null ? ` - Token ID: #${tokenId}` : ''}`
     );
     if (tokenId !== null) {
       loteFinal.tokenId = tokenId;

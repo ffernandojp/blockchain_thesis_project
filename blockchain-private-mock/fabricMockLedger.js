@@ -117,14 +117,15 @@ class FabricMockLedger {
       }
 
       // Regla Operativa y Física: Recepción Completa Obligatoria
-      // Para ingresar a una mezcla en silo, el camión debe haber completado obligatoriamente la recepción en balanza y calador (estado ACONDICIONADO).
-      // Si está en viaje (EN_TRANSITO) o recién cosechado (COSECHADO), se rechaza la consolidación de masa.
-      if (loteOrigen.estado === 'EN_TRANSITO' || loteOrigen.estado === 'COSECHADO') {
-        throw new Error(`Recepción incompleta: El lote ${idOrigen} se encuentra en estado '${loteOrigen.estado}'. Para ingresar a una mezcla en silo, el camión debe completar obligatoriamente la recepción en balanza y calador (estado ACONDICIONADO).`);
+      // Para ingresar a una mezcla en silo, el camión debe haber completado obligatoriamente la recepción en balanza y calador.
+      // Si está en viaje (EN_TRANSITO, EN_TRANSITO_ACOPIO) o recién cosechado (COSECHADO), se rechaza la consolidación de masa.
+      if (loteOrigen.estado === 'EN_TRANSITO' || loteOrigen.estado === 'EN_TRANSITO_ACOPIO' || loteOrigen.estado === 'COSECHADO') {
+        throw new Error(`Recepción incompleta: El lote ${idOrigen} se encuentra en estado '${loteOrigen.estado}'. Para ingresar a una mezcla en silo, el camión debe completar obligatoriamente la recepción en balanza y calador (estado RECEPCIONADO_ACOPIO o ACONDICIONADO).`);
       }
 
-      if (loteOrigen.estado !== 'ACONDICIONADO') {
-        throw new Error(`Lote ${idOrigen} en estado '${loteOrigen.estado}', inválido para acopio y mezcla. Solo se admiten partidas en estado ACONDICIONADO.`);
+      const estadosAdmitidos = ['RECEPCIONADO_ACOPIO', 'ACONDICIONADO', 'ACOPIADO_ACONDICIONADO'];
+      if (!estadosAdmitidos.includes(loteOrigen.estado)) {
+        throw new Error(`Lote ${idOrigen} en estado '${loteOrigen.estado}', inválido para acopio y mezcla. Solo se admiten partidas en estado RECEPCIONADO_ACOPIO o ACONDICIONADO.`);
       }
 
       volumenTotal += loteOrigen.volumenToneladas;
@@ -149,7 +150,13 @@ class FabricMockLedger {
       renspa: 'ACOPIO_CENTRAL', // RENSPA general del acopio / silo
       geolocalizacion: 'Silo_Bahia_Blanca',
       volumenToneladas: volumenConsolidado,
-      estado: 'ACONDICIONADO', // Queda disponible para consolidaciones de nivel superior (ej: buque en puerto)
+      estado: 'ACOPIADO_ACONDICIONADO', // Homogeneizado y acondicionado en silo, disponible para fiscalización SENASA
+      calidadParams: {
+        secado: 'Conforme (<14.0% humedad)',
+        zarandeo: 'Completado (Zaranda oficial)',
+        fumigacion: 'Aplicada (Fosfuro de aluminio)',
+        calidadComercial: 'Grado 2 Homogéneo'
+      },
       ipfsCID: null,
       bfaHash: null,
       fechaCosecha: ahora,
@@ -158,7 +165,7 @@ class FabricMockLedger {
         accion: 'ACOPIO_Y_MEZCLA',
         fecha: ahora,
         actor: 'Planta de Acopio',
-        detalles: `Volumen consolidado: ${volumenConsolidado} TN a partir de ${idsLotesOrigen.length} lotes precursores: ${idsLotesOrigen.join(', ')}`
+        detalles: `Volumen consolidado: ${volumenConsolidado} TN a partir de ${idsLotesOrigen.length} lotes precursores: ${idsLotesOrigen.join(', ')}. Tareas de secado, zarandeo y homogeneización completadas.`
       }]
     };
 
@@ -369,6 +376,221 @@ class FabricMockLedger {
 
   obtenerLotesPorEstado(estado) {
     return Array.from(this.worldState.values()).filter(lote => lote.estado === estado);
+  }
+
+  /**
+   * Registra el acondicionamiento (secado, zarandeo, fumigación, calidad) de una partida en acopio.
+   */
+  acondicionarLote(idLote, calidadParams = {}, actor = 'Acopiador / Cooperativa') {
+    const lote = this.worldState.get(idLote);
+    if (!lote) throw new Error(`Lote ${idLote} no encontrado.`);
+
+    const estadosValidos = ['RECEPCIONADO_ACOPIO', 'ACONDICIONADO'];
+    if (!estadosValidos.includes(lote.estado)) {
+      throw new Error(`Estado inválido: El lote ${idLote} está en estado '${lote.estado}'. Debe estar en 'RECEPCIONADO_ACOPIO' para registrar acondicionamiento en silo.`);
+    }
+
+    const ahora = new Date().toISOString();
+    lote.estado = 'ACOPIADO_ACONDICIONADO';
+    lote.calidadParams = {
+      secado: calidadParams.secado || 'Conforme (<14.0% humedad)',
+      zarandeo: calidadParams.zarandeo || 'Completado (Zaranda oficial)',
+      fumigacion: calidadParams.fumigacion || 'Aplicada (Fosfuro de aluminio)',
+      calidadComercial: calidadParams.calidadComercial || 'Grado 2 Oficial',
+      fechaAcondicionamiento: ahora
+    };
+
+    lote.historialTransacciones.push({
+      accion: 'ACONDICIONAMIENTO_SILO',
+      fecha: ahora,
+      actor: actor,
+      detalles: `Acondicionamiento completado: Secado, zarandeo, fumigación y tipificación comercial (${lote.calidadParams.calidadComercial}).`
+    });
+
+    this.worldState.set(idLote, lote);
+    return lote;
+  }
+
+  /**
+   * Momento de emisión del Certificado de SENASA:
+   * Se emite una vez que el grano ingresa a acopio/silo y es sometido a tareas de acondicionamiento.
+   * Valida lote físico, ausencia de plagas cuarentenarias y estampa el sello oficial BFA.
+   */
+  notarizarSenasa(idLote, datosInspeccion = {}, actor = 'Organismo de Control (SENASA/ARCA)', bfaHash = null) {
+    const lote = this.worldState.get(idLote);
+    if (!lote) throw new Error(`Lote ${idLote} no encontrado.`);
+
+    if (lote.estado === 'MEZCLADO_ACONDICIONADO') {
+      throw new Error(`Acción regulatoria denegada: El lote ${idLote} ya fue consumido en una mezcla posterior (MEZCLADO_ACONDICIONADO).`);
+    }
+
+    if (lote.estado !== 'ACOPIADO_ACONDICIONADO' && lote.estado !== 'ACONDICIONADO') {
+      throw new Error(`Momento de emisión del Certificado de SENASA inválido: El lote ${idLote} se encuentra en estado '${lote.estado}'. Solo se emite una vez que el grano ingresa al acopio y es sometido a tareas de acondicionamiento (ACOPIADO_ACONDICIONADO).`);
+    }
+
+    const ahora = new Date().toISOString();
+    lote.estado = 'VALIDADO_SENASA';
+    if (bfaHash) lote.bfaHash = bfaHash;
+
+    lote.certificacionSenasa = {
+      inspector: datosInspeccion.inspector || 'Inspector SENASA / ARCA',
+      plagasCuarentenarias: datosInspeccion.plagasCuarentenarias || 'Ausencia de plagas cuarentenarias certificada',
+      calidadTipificada: datosInspeccion.calidadTipificada || 'Grado 2 Homogéneo Conforme',
+      conformidadFitosanitaria: true,
+      bfaHash: bfaHash,
+      fechaCertificacion: ahora
+    };
+
+    lote.historialTransacciones.push({
+      accion: 'FISCALIZACION_SENASA_BFA',
+      fecha: ahora,
+      actor: actor,
+      detalles: `Conformidad fitosanitaria oficial estampada en BFA. Libre de plagas cuarentenarias. Hash BFA: ${bfaHash}`
+    });
+
+    this.worldState.set(idLote, lote);
+    return lote;
+  }
+
+  /**
+   * Momento de transporte hacia la terminal portuaria:
+   * El traslado se autoriza únicamente cuando el lote posee:
+   * 1. Estado de calidad validado (ACOPIADO_ACONDICIONADO o VALIDADO_SENASA)
+   * 2. Notarización oficial registrada (BFA Hash)
+   * 3. Emisión de una nueva Carta de Porte Electrónica (CPE) de traslado con destino específico al puerto (Bahía Blanca o Quequén).
+   */
+  emitirCpeTraslado(idLote, datosCpe = {}, actor = 'Acopiador / Cooperativa') {
+    const lote = this.worldState.get(idLote);
+    if (!lote) throw new Error(`Lote ${idLote} no encontrado.`);
+
+    // 1. Estado de calidad validado y certificación SENASA
+    if (lote.estado !== 'VALIDADO_SENASA' && !(lote.bfaHash && (lote.estado === 'ACOPIADO_ACONDICIONADO' || lote.estado === 'ACONDICIONADO'))) {
+      throw new Error(`Autorización denegada para traslado a puerto: El lote ${idLote} requiere estado de calidad validado y fiscalización fitosanitaria oficial de SENASA.`);
+    }
+
+    // 2. Notarización oficial registrada (BFA Hash)
+    if (!lote.bfaHash) {
+      throw new Error(`Autorización denegada para traslado a puerto: El lote ${idLote} requiere notarización oficial registrada en BFA.`);
+    }
+
+    // 3. Destino específico al puerto de exportación (Bahía Blanca o Quequén)
+    const destino = datosCpe.destinoPuerto || 'Puerto de Bahía Blanca';
+    const destinosValidos = ['Puerto de Bahía Blanca', 'Puerto de Quequén', 'Bahía Blanca', 'Quequén'];
+    const esDestinoValido = destinosValidos.some(d => destino.toLowerCase().includes(d.toLowerCase()));
+    if (!esDestinoValido) {
+      throw new Error(`Destino no autorizado: El traslado debe tener destino específico al puerto de exportación (Bahía Blanca o Quequén). Recibido: '${destino}'`);
+    }
+
+    const ahora = new Date().toISOString();
+    lote.estado = 'EN_TRANSITO_PUERTO';
+    lote.cpeTraslado = {
+      tipo: 'CPE_TRASLADO_FLETE_LARGO',
+      numeroCPE: datosCpe.numeroCPE || `CPE-TL-${Date.now().toString().slice(-6)}`,
+      ctg: datosCpe.ctg || `CTG-${Date.now().toString().slice(-8)}`,
+      destinoPuerto: destino.includes('Quequén') ? 'Puerto de Quequén' : 'Puerto de Bahía Blanca',
+      transportista: datosCpe.transportista || 'Transporte Logístico Portuario',
+      cuitTransportista: datosCpe.cuitTransportista || '30-66778899-1',
+      patenteCamion: datosCpe.patenteCamion || 'AF 456 GH',
+      ipfsCID: datosCpe.ipfsCID || null,
+      fechaEmision: ahora
+    };
+
+    lote.historialTransacciones.push({
+      accion: 'EMISION_CPE_TRASLADO_PUERTO',
+      fecha: ahora,
+      actor: actor,
+      detalles: `Nueva Carta de Porte Electrónica (CPE) de traslado emitida con destino a ${lote.cpeTraslado.destinoPuerto}. En tránsito hacia terminal portuaria.`
+    });
+
+    this.worldState.set(idLote, lote);
+    return lote;
+  }
+
+  /**
+   * Recepción Portuaria:
+   * El Exportador y la Aduana validan el arribo del convoy y confirman la CPE de descarga.
+   */
+  confirmarArriboPuerto(idLote, datosDescarga = {}, actor = 'Exportador (Puertos)') {
+    const lote = this.worldState.get(idLote);
+    if (!lote) throw new Error(`Lote ${idLote} no encontrado.`);
+
+    if (lote.estado !== 'EN_TRANSITO_PUERTO') {
+      throw new Error(`Arribo portuario inválido: El lote ${idLote} se encuentra en estado '${lote.estado}'. Debe estar en 'EN_TRANSITO_PUERTO'.`);
+    }
+
+    const ahora = new Date().toISOString();
+    lote.estado = 'ARRIBADO_PUERTO';
+    lote.arriboPuerto = {
+      fechaArribo: ahora,
+      cpeDescargaConfirmada: true,
+      terminal: datosDescarga.terminal || (lote.cpeTraslado ? lote.cpeTraslado.destinoPuerto : 'Terminal Portuaria Bahía Blanca'),
+      balanzaPuertoTN: datosDescarga.balanzaPuertoTN ? parseFloat(datosDescarga.balanzaPuertoTN) : lote.volumenToneladas,
+      inspectorAduana: datosDescarga.inspectorAduana || 'Aduana / ARCA / Terminal Portuaria'
+    };
+
+    lote.historialTransacciones.push({
+      accion: 'ARRIBO_CONFIRMACION_CPE_PUERTO',
+      fecha: ahora,
+      actor: actor,
+      detalles: `Arribo de convoy validado en terminal portuaria. Confirmación definitiva de la CPE de descarga efectuada.`
+    });
+
+    this.worldState.set(idLote, lote);
+    return lote;
+  }
+
+  /**
+   * Listado de pedidos habilitados en la planta de exportación:
+   * En la terminal portuaria, los pedidos se listan en estado Habilitado para Embarque únicamente si cumplen concurrentemente con:
+   * 1. Arribo y confirmación definitiva de la CPE de descarga.
+   * 2. Sellado de tiempo y hash inmutable de SENASA/AFIP comprobable en BFA.
+   * 3. Acreditación estricta de trazabilidad de masa hacia atrás (backtracking completo hasta los lotes y RENSPA de origen).
+   */
+  verificarHabilitadoParaEmbarque(idLote) {
+    const lote = this.worldState.get(idLote);
+    if (!lote) return { habilitado: false, error: `Lote ${idLote} no encontrado` };
+
+    // 1. Arribo y confirmación definitiva de la CPE de descarga
+    const cpeDescargaConfirmada = (lote.estado === 'ARRIBADO_PUERTO') || 
+                                  (lote.arriboPuerto && lote.arriboPuerto.cpeDescargaConfirmada === true);
+
+    // 2. Sellado de tiempo y hash inmutable de SENASA/AFIP comprobable en BFA
+    const selloBfaValido = !!lote.bfaHash && lote.bfaHash.length >= 32;
+
+    // 3. Acreditación estricta de trazabilidad de masa hacia atrás (backtracking completo hasta los lotes y RENSPA de origen)
+    const trazaCompleta = this.obtenerTrazabilidadCompleta(idLote);
+    const origenes = trazaCompleta && Array.isArray(trazaCompleta.desgloseOrigenes) ? trazaCompleta.desgloseOrigenes : [];
+    const trazabilidadMasaAcreditada = origenes.length > 0 && origenes.every(orig => 
+      orig.renspa && orig.renspa !== 'No especificado' && orig.volumenAportadoTN > 0
+    );
+
+    const habilitado = Boolean(cpeDescargaConfirmada && selloBfaValido && trazabilidadMasaAcreditada);
+
+    return {
+      id: idLote,
+      habilitado,
+      estado: lote.estado,
+      checks: {
+        cpeDescargaConfirmada: {
+          cumplido: Boolean(cpeDescargaConfirmada),
+          descripcion: 'Arribo y confirmación definitiva de la CPE de descarga en terminal portuaria'
+        },
+        selloBfaValido: {
+          cumplido: Boolean(selloBfaValido),
+          bfaHash: lote.bfaHash || null,
+          descripcion: 'Sellado de tiempo y hash inmutable de SENASA/AFIP comprobable en BFA'
+        },
+        trazabilidadMasaAcreditada: {
+          cumplido: Boolean(trazabilidadMasaAcreditada),
+          cantidadOrigenes: origenes.length,
+          origenes: origenes.map(o => ({ id: o.id, renspa: o.renspa, tn: o.volumenAportadoTN })),
+          descripcion: 'Acreditación estricta de trazabilidad de masa hacia atrás (backtracking y RENSPA)'
+        }
+      },
+      cpeTraslado: lote.cpeTraslado || null,
+      arriboPuerto: lote.arriboPuerto || null,
+      volumenToneladas: lote.volumenToneladas
+    };
   }
 
   obtenerTodosLotes() {

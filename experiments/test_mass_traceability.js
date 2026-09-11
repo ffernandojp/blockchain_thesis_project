@@ -65,7 +65,7 @@ assert.strictEqual(precursorB.ipfsCID, 'bafybeicarta002bbb');
 // Validar lote hijo
 assert.strictEqual(loteMezcla100.id, 'SILO-BAHIA-100');
 assert.strictEqual(loteMezcla100.volumenToneladas, 100.0);
-assert.strictEqual(loteMezcla100.estado, 'ACONDICIONADO');
+assert(['ACOPIADO_ACONDICIONADO', 'ACONDICIONADO'].includes(loteMezcla100.estado));
 assert.deepStrictEqual(loteMezcla100.lotesOrigen, ['LOTE-AGRO-001', 'LOTE-AGRO-002']);
 console.log('✅ Test 2 Superado: Preservación inmutable y lote consolidado validados.\n');
 

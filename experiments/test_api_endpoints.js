@@ -8,6 +8,11 @@ fabricLedger.limpiar();
 // Register harvest lots
 fabricLedger.registrarCosechaPrimaria('LOTE-API-1', '01.002.0.00111/00', 'Lat: -34.6037, Lon: -58.3816', 40.0, 'cid-api-1');
 fabricLedger.registrarCosechaPrimaria('LOTE-API-2', '02.003.0.00222/00', 'Lat: -33.8912, Lon: -60.5421', 60.0, 'cid-api-2');
+
+// Receive in elevator balance & quality check
+fabricLedger.actualizarEstadoLogistico('LOTE-API-1', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje balanza: 40 TN');
+fabricLedger.actualizarEstadoLogistico('LOTE-API-2', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje balanza: 60 TN');
+
 fabricLedger.procesarAcopioYMezcla('LOTE-MEZCLA-API', ['LOTE-API-1', 'LOTE-API-2']);
 
 // Test obtaining complete traceability

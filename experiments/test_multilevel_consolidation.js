@@ -65,7 +65,7 @@ async function runMultilevelConsolidationTests() {
 
     assert.strictEqual(siloIntermedio.id, 'SILO-INTERMEDIO-1');
     assert.strictEqual(siloIntermedio.volumenToneladas, 100.0);
-    assert.strictEqual(siloIntermedio.estado, 'ACONDICIONADO');
+    assert(['ACOPIADO_ACONDICIONADO', 'ACONDICIONADO'].includes(siloIntermedio.estado));
     console.log(`✅ Consolidación intermedia exitosa: ${siloIntermedio.id} con ${siloIntermedio.volumenToneladas} TN.`);
 
     // 3. Verificación de Mutación de Estados Terminales en Precursores
