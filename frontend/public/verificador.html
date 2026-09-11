@@ -26,14 +26,36 @@
 
             <div id="content" style="display: none;">
                 <div class="lote-header">
-                    <h2>Identificador de Lote</h2>
+                    <div id="lote-status-badge" class="lote-status-badge"></div>
+                    <h2>Identificador Oficial de Lote</h2>
                     <div id="lote-title" class="lote-id"></div>
                     
+                    <!-- Resumen General del Lote / Contenedor -->
+                    <div class="header-meta-grid">
+                        <div class="header-meta-item">
+                            <span class="meta-label">Volumen Total Consolidado</span>
+                            <span class="meta-value" id="header-volumen">-- TN</span>
+                        </div>
+                        <div class="header-meta-item">
+                            <span class="meta-label">Sello Notarial BFA</span>
+                            <span class="meta-value" id="header-bfa-time">--</span>
+                        </div>
+                        <div class="header-meta-item full-width" id="header-contract-container">
+                            <span class="meta-label">Certificado Blockchain (Hardhat / Polygon EVM)</span>
+                            <span class="meta-value" id="header-contract-link">--</span>
+                        </div>
+                    </div>
+
                     <!-- Contenedor del QR de Trazabilidad -->
                     <div id="qr-container" style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; justify-content: center;">
                         <img id="qr-image" src="" alt="Código QR de Verificación" style="width: 140px; height: 140px; border: 4px solid #ffffff; box-shadow: var(--shadow-soft); border-radius: 8px; background: #ffffff;" />
-                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">Código QR de Trazabilidad</span>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">Código QR de Trazabilidad Inmutable</span>
                     </div>
+                </div>
+
+                <!-- SECCIÓN: ÁRBOL GENEALÓGICO MULTINIVEL (DAG) -->
+                <div id="genealogy-tree-section" class="genealogy-tree-section">
+                    <!-- Rendered dynamically by verificador.js -->
                 </div>
                 
                 <div class="timeline" id="timeline">

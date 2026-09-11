@@ -19,10 +19,138 @@ window.showToast = function (message, type = 'success') {
     }, 4000);
 };
 
+// Obtener perfil autenticado actual (deserializado de localStorage o decodificado del JWT)
+window.obtenerUsuarioActual = function () {
+    const token = localStorage.getItem('agtech_token');
+    if (!token) return null;
+    try {
+        const raw = localStorage.getItem('agtech_user');
+        if (raw) return JSON.parse(raw);
+    } catch (e) {
+        console.warn("Error leyendo agtech_user", e);
+    }
+
+    if (token === 'mock_token') {
+        return {
+            username: 'productor1',
+            rol: 'Productor Agrícola',
+            cuit: '20-30123456-4',
+            renspa: '01.002.0.00345/00',
+            campos: [{ renspa: '01.002.0.00345/00', alias: 'Establecimiento San Pedro' }]
+        };
+    }
+
+    if (token.includes('.')) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (e) {
+            console.warn("Error decodificando JWT", e);
+        }
+    }
+    return null;
+};
+
+// Renderizado dinámico del campo RENSPA (Patrón de diseño Mono vs Multi-Establecimiento)
+window.renderizarSelectorRenspa = function (user) {
+    const contenedor = document.getElementById('contenedor-renspa');
+    const ayudaDiv = document.getElementById('renspa-ayuda');
+    if (!contenedor) return;
+
+    let campos = [];
+    if (user && Array.isArray(user.campos) && user.campos.length > 0) {
+        campos = user.campos;
+    } else if (user && user.renspa) {
+        campos = [{ renspa: user.renspa, alias: 'Establecimiento Principal' }];
+    }
+
+    // Caso 1: Productor mono-establecimiento (1 campo)
+    // El campo RENSPA Origen se presenta en modo de solo lectura (read-only), completado automáticamente por el frontend
+    if (campos.length === 1) {
+        const campo = campos[0];
+        contenedor.innerHTML = `
+            <input type="text" id="renspa" name="renspa" value="${campo.renspa}" readonly class="readonly-field" required title="Establecimiento único fijado por perfil">
+        `;
+        if (ayudaDiv) {
+            ayudaDiv.style.display = 'block';
+            ayudaDiv.innerHTML = `<span class="renspa-badge-mono">🔒 Solo lectura: Autocompletado por perfil (${campo.alias || 'Establecimiento Principal'})</span>`;
+        }
+
+        const inputEl = document.getElementById('renspa');
+        if (inputEl) {
+            inputEl.addEventListener('input', () => {
+                if (inputEl.readOnly && inputEl.value !== campo.renspa) {
+                    inputEl.value = campo.renspa;
+                }
+                if (typeof window.actualizarHashLotePreviewGlobal === 'function') {
+                    window.actualizarHashLotePreviewGlobal();
+                }
+            });
+        }
+    } 
+    // Caso 2: Productor multi-establecimiento (1:N campos)
+    // El formulario renderiza un selector desplegable (<select>) precargado con los RENSPA y alias de los campos
+    else if (campos.length > 1) {
+        const optionsHtml = campos.map((c, index) => `
+            <option value="${c.renspa}" ${index === 0 ? 'selected' : ''}>${c.alias} - ${c.renspa}</option>
+        `).join('');
+
+        contenedor.innerHTML = `
+            <select id="renspa" name="renspa" class="form-select" required>
+                ${optionsHtml}
+            </select>
+        `;
+        if (ayudaDiv) {
+            ayudaDiv.style.display = 'block';
+            ayudaDiv.innerHTML = `<span class="renspa-badge-multi">🌾 Selector Multi-establecimiento: Seleccione campo de origen (${campos.length} habilitados)</span>`;
+        }
+
+        const selectEl = document.getElementById('renspa');
+        if (selectEl) {
+            selectEl.addEventListener('change', () => {
+                if (typeof window.actualizarHashLotePreviewGlobal === 'function') {
+                    window.actualizarHashLotePreviewGlobal();
+                }
+            });
+            selectEl.addEventListener('input', () => {
+                if (typeof window.actualizarHashLotePreviewGlobal === 'function') {
+                    window.actualizarHashLotePreviewGlobal();
+                }
+            });
+        }
+    } 
+    // Fallback genérico si no hay sesión o no es productor
+    else {
+        contenedor.innerHTML = `
+            <input type="text" id="renspa" name="renspa" placeholder="Ej: 01.002.0.00034/00" required>
+        `;
+        if (ayudaDiv) {
+            ayudaDiv.style.display = 'none';
+            ayudaDiv.innerHTML = '';
+        }
+
+        const fallbackInput = document.getElementById('renspa');
+        if (fallbackInput) {
+            fallbackInput.addEventListener('input', () => {
+                if (typeof window.actualizarHashLotePreviewGlobal === 'function') {
+                    window.actualizarHashLotePreviewGlobal();
+                }
+            });
+        }
+    }
+
+    if (typeof window.actualizarHashLotePreviewGlobal === 'function') {
+        window.actualizarHashLotePreviewGlobal();
+    }
+};
+
 window.evaluarPantalla = function () {
     // Obtenemos los paneles dinámicamente para evitar problemas de timing
     const loginPanel = document.getElementById('login-panel');
     const userInfoPanel = document.getElementById('user-info-panel');
+    const currentUserInfo = document.getElementById('current-user-info');
     const registroPanel = document.getElementById('registro-panel');
     const transportePanel = document.getElementById('transporte-panel');
     const acopioPanel = document.getElementById('acopio-panel');
@@ -40,26 +168,46 @@ window.evaluarPantalla = function () {
     const token = localStorage.getItem('agtech_token');
     const role = localStorage.getItem('agtech_role');
 
-
-
     if (!token) {
         if (loginPanel) loginPanel.style.display = 'block';
         if (userInfoPanel) userInfoPanel.style.display = 'none';
+        if (currentUserInfo) currentUserInfo.style.display = 'none';
         if (registroPanel) registroPanel.style.display = 'none';
         if (transportePanel) transportePanel.style.display = 'none';
         if (acopioPanel) acopioPanel.style.display = 'none';
         if (notarizarPanel) notarizarPanel.style.display = 'none';
         if (exportarPanel) exportarPanel.style.display = 'none';
+
+        if (typeof window.renderizarSelectorRenspa === 'function') {
+            window.renderizarSelectorRenspa(null);
+        }
     } else {
         if (loginPanel) loginPanel.style.display = 'none';
         if (userInfoPanel) userInfoPanel.style.display = 'block';
         if (currentRoleSpan) currentRoleSpan.textContent = role;
+
+        const user = window.obtenerUsuarioActual();
+        if (currentUserInfo) {
+            if (user) {
+                currentUserInfo.style.display = 'block';
+                currentUserInfo.innerHTML = `
+                    <strong>${user.username || ''}</strong><br>
+                    ${user.cuit ? `<span style="font-size: 0.75rem; opacity: 0.9;">CUIT: ${user.cuit}</span>` : ''}
+                `;
+            } else {
+                currentUserInfo.style.display = 'none';
+            }
+        }
 
         if (registroPanel) registroPanel.style.display = role === 'Productor Agrícola' ? 'block' : 'none';
         if (transportePanel) transportePanel.style.display = role === 'Transportista' ? 'block' : 'none';
         if (acopioPanel) acopioPanel.style.display = role === 'Acopiador / Cooperativa' ? 'block' : 'none';
         if (notarizarPanel) notarizarPanel.style.display = role === 'Organismo de Control (SENASA/ARCA)' ? 'block' : 'none';
         if (exportarPanel) exportarPanel.style.display = role === 'Exportador (Puertos)' ? 'block' : 'none';
+
+        if (role === 'Productor Agrícola' && typeof window.renderizarSelectorRenspa === 'function') {
+            window.renderizarSelectorRenspa(user);
+        }
 
         if (typeof window.cargarDatosIniciales === 'function') {
             window.cargarDatosIniciales(role);
@@ -69,7 +217,7 @@ window.evaluarPantalla = function () {
             setTimeout(window.initTransportMap, 300); // Dar tiempo a que el panel sea visible
         }
     }
-}
+};
 document.addEventListener('DOMContentLoaded', () => {
 
 
@@ -232,6 +380,127 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
                 }
+
+                // Cargar lotes disponibles para mezcla en silos (Trazabilidad de Masa)
+                const resMezcla = await fetch('http://localhost:3000/api/lotes/para-mezcla', { headers: { 'Authorization': 'Bearer ' + token } });
+                const jsonMezcla = await resMezcla.json();
+                const containerMezcla = document.getElementById('listaLotesMezcla');
+                const resumenMezcla = document.getElementById('resumen-mezcla');
+                const volumenProyectado = document.getElementById('volumenProyectadoMezcla');
+                const cantidadLotes = document.getElementById('cantidadLotesMezcla');
+
+                if (containerMezcla && jsonMezcla.success) {
+                    if (jsonMezcla.data.length === 0) {
+                        containerMezcla.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 15px; font-size: 0.9rem;">No hay partidas acondicionadas disponibles. Recepcione y pese los camiones en balanza oficial para habilitar su mezcla en silos.</p>';
+                        if (resumenMezcla) resumenMezcla.style.display = 'none';
+                    } else {
+                        containerMezcla.innerHTML = jsonMezcla.data.map(l => `
+                            <div class="lot-card mezcla-card" data-id="${l.id}" data-vol="${l.volumenToneladas}" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <input type="checkbox" class="chk-lote-mezcla" value="${l.id}" data-vol="${l.volumenToneladas}" style="transform: scale(1.3); cursor: pointer;">
+                                    <div class="lot-card-info">
+                                        <h4 style="margin: 0; font-size: 0.95rem;">Lote: ${l.id}</h4>
+                                        <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-secondary);">RENSPA: ${l.renspa}</p>
+                                        <p style="margin: 2px 0 0; font-weight: bold; color: var(--secondary-color); font-size: 0.9rem;">${l.volumenToneladas} TN</p>
+                                    </div>
+                                </div>
+                                <div class="lot-card-status" style="font-size: 0.72rem; background: #0284c7; color: white; padding: 2px 6px; border-radius: 4px;">ACONDICIONADO</div>
+                            </div>
+                        `).join('');
+
+                        const checkboxes = containerMezcla.querySelectorAll('.chk-lote-mezcla');
+                        const cardsMezcla = containerMezcla.querySelectorAll('.lot-card.mezcla-card');
+
+                        function actualizarResumenMezcla() {
+                            let totalVol = 0;
+                            let count = 0;
+                            checkboxes.forEach(chk => {
+                                if (chk.checked) {
+                                    totalVol += parseFloat(chk.dataset.vol || 0);
+                                    count++;
+                                }
+                            });
+                            if (count > 0 && resumenMezcla) {
+                                resumenMezcla.style.display = 'block';
+                                if (volumenProyectado) volumenProyectado.textContent = `${totalVol.toFixed(2)} TN`;
+                                if (cantidadLotes) cantidadLotes.textContent = count;
+                            } else if (resumenMezcla) {
+                                resumenMezcla.style.display = 'none';
+                            }
+                        }
+
+                        cardsMezcla.forEach(card => {
+                            card.addEventListener('click', (e) => {
+                                if (e.target.tagName !== 'INPUT') {
+                                    const chk = card.querySelector('.chk-lote-mezcla');
+                                    chk.checked = !chk.checked;
+                                }
+                                card.classList.toggle('selected', card.querySelector('.chk-lote-mezcla').checked);
+                                actualizarResumenMezcla();
+                            });
+                        });
+                    }
+                }
+            } else if (role === 'Organismo de Control (SENASA/ARCA)') {
+                // Listar automáticamente las partidas activas (ACONDICIONADO) disponibles para auditoría y Sello BFA
+                const res = await fetch('http://localhost:3000/api/lotes/buscar', { headers: { 'Authorization': 'Bearer ' + token } });
+                const json = await res.json();
+                const resultDiv = document.getElementById('resultados-busqueda-senasa');
+                const formSenasa = document.getElementById('notarizar-form');
+                if (resultDiv && json.success) {
+                    if (json.data.length === 0) {
+                        resultDiv.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 15px; font-size: 0.9rem;">No hay partidas activas en estado ACONDICIONADO pendientes de auditoría.</p>';
+                        if (formSenasa) formSenasa.style.display = 'none';
+                    } else {
+                        resultDiv.innerHTML = `
+                            <p style="font-size: 0.85rem; color: #a7f3d0; margin-bottom: 8px; font-weight: 600;">
+                                📋 Partidas Activas Disponibles para Auditoría (${json.data.length}):
+                            </p>
+                            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto;">
+                                ${json.data.map(l => {
+                                    const verifUrl = `${window.location.origin}${basePath}/verificador?id=${l.id}`;
+                                    const tieneBFA = !!l.bfaHash;
+                                    return `
+                                        <div class="lot-card senasa-lot-card" data-id="${l.id}" style="cursor: pointer; background: #132a13; border: 1px solid #2d6a4f; padding: 10px 14px; border-radius: 6px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <div>
+                                                    <strong style="color: #ffffff; font-size: 0.95rem;">Lote: ${l.id}</strong>
+                                                    <div style="font-size: 0.8rem; color: #9ca3af; margin-top: 2px;">
+                                                        RENSPA: ${l.renspa} | Vol: <strong>${l.volumenToneladas} TN</strong>
+                                                    </div>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <span class="badge" style="background:#0284c7; color:white; font-size:0.75rem; padding: 2px 6px; border-radius: 4px;">${l.estado}</span>
+                                                    ${tieneBFA ? '<div style="font-size:0.7rem; color:#86efac; margin-top:3px;">🛡️ Sellado BFA</div>' : '<div style="font-size:0.7rem; color:#fde047; margin-top:3px;">⏳ Sin Sello BFA</div>'}
+                                                </div>
+                                            </div>
+                                            <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                                <a href="${verifUrl}" target="_blank" onclick="event.stopPropagation();" style="color: #38bdf8; font-size: 0.78rem; text-decoration: underline;">🔍 Ver Traza / QR</a>
+                                                <span style="font-size: 0.75rem; color: #86efac;">👆 Clic para auditar</span>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+
+                        const cards = resultDiv.querySelectorAll('.senasa-lot-card');
+                        cards.forEach(card => {
+                            card.addEventListener('click', () => {
+                                cards.forEach(c => c.style.borderColor = '#2d6a4f');
+                                card.style.borderColor = '#38bdf8';
+                                const idSel = card.dataset.id;
+                                document.getElementById('lote-seleccionado-senasa').textContent = idSel;
+                                document.getElementById('idLoteNotarizar').value = idSel;
+                                const secBloqueo = document.getElementById('bloqueo-form-section');
+                                if (secBloqueo) secBloqueo.style.display = 'none';
+                                const inpBloqueo = document.getElementById('input-motivo-bloqueo');
+                                if (inpBloqueo) inpBloqueo.value = '';
+                                if (formSenasa) formSenasa.style.display = 'block';
+                            });
+                        });
+                    }
+                }
             }
         } catch (e) {
             console.error("Error cargando datos iniciales", e);
@@ -242,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('login-user').value;
+        const username = document.getElementById('login-user').value.trim();
         const password = document.getElementById('login-pass').value;
         try {
             const res = await fetch('http://localhost:3000/api/auth/login', {
@@ -254,9 +523,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 localStorage.setItem('agtech_token', data.token);
                 localStorage.setItem('agtech_role', data.rol);
+                const userInfo = {
+                    username: username,
+                    rol: data.rol,
+                    cuit: data.cuit,
+                    campos: data.campos || [],
+                    renspa: data.renspa
+                };
+                localStorage.setItem('agtech_user', JSON.stringify(userInfo));
                 window.evaluarPantalla();
                 loginForm.reset();
-                agregarLog(`<span class="success-text">✅ Sesión iniciada como ${data.rol}</span>`);
+                agregarLog(`<span class="success-text">✅ Sesión iniciada como ${data.rol} (${data.cuit || username})</span>`);
+                showToast(`Sesión iniciada: ${username}`, 'success');
             } else {
                 alert("Error de login: " + data.error);
             }
@@ -268,6 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => {
         localStorage.removeItem('agtech_token');
         localStorage.removeItem('agtech_role');
+        localStorage.removeItem('agtech_user');
         window.evaluarPantalla();
         agregarLog(`ℹ️ Sesión cerrada.`);
     });
@@ -343,7 +622,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function actualizarHashLotePreview() {
-        const renspa = document.getElementById('renspa').value || '';
+        const renspaEl = document.getElementById('renspa');
+        const renspa = renspaEl ? renspaEl.value.trim() : '';
         const fileInput = document.getElementById('documento');
         const file = fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
 
@@ -379,9 +659,15 @@ document.addEventListener('DOMContentLoaded', () => {
         idLoteInput.value = '0x' + hashHex.substring(0, 16);
     }
 
+    // Exponer función de preview de hash para actualizarse cuando cambia el selector o se autocompleta
+    window.actualizarHashLotePreviewGlobal = actualizarHashLotePreview;
+
     const inputRenspa = document.getElementById('renspa');
     const inputDocumento = document.getElementById('documento');
-    if (inputRenspa) inputRenspa.addEventListener('input', actualizarHashLotePreview);
+    if (inputRenspa) {
+        inputRenspa.addEventListener('input', actualizarHashLotePreview);
+        inputRenspa.addEventListener('change', actualizarHashLotePreview);
+    }
     if (inputDocumento) inputDocumento.addEventListener('change', actualizarHashLotePreview);
 
     // Interceptar envío de formulario
@@ -456,6 +742,12 @@ document.addEventListener('DOMContentLoaded', () => {
         form.reset();
         setLoadingState(btn, false);
         window.cargarDatosIniciales('Productor Agrícola'); // Refrescar lista
+
+        // Re-renderizar selector o campo readonly de RENSPA según el perfil autenticado tras reset
+        const userActual = window.obtenerUsuarioActual();
+        if (userActual && typeof window.renderizarSelectorRenspa === 'function') {
+            window.renderizarSelectorRenspa(userActual);
+        }
 
         // Actualizar el timestamp para el próximo lote y limpiar preview
         currentLoteTimestamp = new Date().toISOString();
@@ -532,34 +824,115 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Interceptar envío de formulario Mezcla en Silos (Trazabilidad de Masa)
+    const formMezcla = document.getElementById('mezcla-form');
+    if (formMezcla) {
+        formMezcla.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-mezcla');
+            setLoadingState(btn, true);
+
+            const nuevoIdLote = document.getElementById('nuevoIdLoteMezcla').value.trim();
+            const checkedBoxes = document.querySelectorAll('#listaLotesMezcla .chk-lote-mezcla:checked');
+            const idsLotesOrigen = Array.from(checkedBoxes).map(cb => cb.value);
+
+            if (idsLotesOrigen.length < 2) {
+                showToast('Debe seleccionar al menos 2 lotes precursores para la mezcla.', 'warning');
+                agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR MEZCLA] Se requieren al menos 2 lotes para consolidar en silo.</span>`);
+                setLoadingState(btn, false);
+                return;
+            }
+
+            try {
+                const res = await fetch('http://localhost:3000/api/lotes/mezclar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
+                    },
+                    body: JSON.stringify({ nuevoIdLote, idsLotesOrigen })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+                    const verifUrl = `${window.location.origin}${basePath}/verificador?id=${nuevoIdLote}`;
+                    agregarLog(`<span class="success-text">✅ [MEZCLA EN SILO] Lote consolidado ${nuevoIdLote} (${result.data.volumenToneladas} TN) creado a partir de ${idsLotesOrigen.length} lotes. <a href="${verifUrl}" target="_blank" style="color: #4ade80; text-decoration: underline; font-weight: bold; margin-left: 6px;">[Ver Trazabilidad de Masa ↗]</a></span>`);
+                    showToast(`Lote consolidado ${nuevoIdLote} creado con éxito.`, 'success');
+                    formMezcla.reset();
+                    const resumenMezcla = document.getElementById('resumen-mezcla');
+                    if (resumenMezcla) resumenMezcla.style.display = 'none';
+                    window.cargarDatosIniciales('Acopiador / Cooperativa');
+                } else {
+                    agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR MEZCLA] ${result.error}</span>`);
+                    showToast(`Error al mezclar: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error al realizar mezcla en silo:', error);
+                agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR MEZCLA] Problema de conexión.</span>`);
+            }
+            setLoadingState(btn, false);
+        });
+    }
+
     // SENASA: Búsqueda y Bloqueo
     const btnBuscarSenasa = document.getElementById('btn-buscar-senasa');
     if (btnBuscarSenasa) {
         btnBuscarSenasa.addEventListener('click', async () => {
-            const query = document.getElementById('input-busqueda-senasa').value;
+            const query = (document.getElementById('input-busqueda-senasa').value || '').trim();
             setLoadingState(btnBuscarSenasa, true);
             try {
-                const res = await fetch(`http://localhost:3000/api/lotes/buscar?q=${query}`, {
+                const res = await fetch(`http://localhost:3000/api/lotes/buscar?q=${encodeURIComponent(query)}`, {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('agtech_token') }
                 });
                 const json = await res.json();
                 const resultDiv = document.getElementById('resultados-busqueda-senasa');
                 const formSenasa = document.getElementById('notarizar-form');
+                const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
 
                 if (json.success && json.data.length > 0) {
-                    const l = json.data[0]; // Seleccionamos el primero
+                    const l = json.data[0]; // Seleccionamos el primero si es búsqueda específica
+                    const verifUrl = `${window.location.origin}${basePath}/verificador?id=${l.id}`;
                     resultDiv.innerHTML = `
                         <div style="background: #1b4332; padding: 15px; border-radius: 8px; color: #e5e7eb; margin-top: 15px; word-break: break-all; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <p style="margin-bottom: 8px;"><strong style="color: #ffffff;">Lote Encontrado:</strong> ${l.id}</p>
-                            <p style="margin-bottom: 8px;"><strong style="color: #ffffff;">Estado Actual:</strong> ${l.estado}</p>
-                            ${l.ipfsCID ? `<p style="margin-bottom: 0;"><strong style="color: #ffffff;">IPFS Doc:</strong> <a href="http://127.0.0.1:8080/ipfs/${l.ipfsCID}" target="_blank" style="color:#4ade80; text-decoration: underline; font-weight: bold;">Ver Documento</a></p>` : ''}
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span style="font-size:1rem; font-weight:bold; color:#ffffff;">Lote Activo: ${l.id}</span>
+                                <span class="badge" style="background:#0284c7; color:white; padding:4px 8px; border-radius:4px; font-size:0.8rem;">${l.estado}</span>
+                            </div>
+                            <p style="margin-bottom: 6px;"><strong style="color: #ffffff;">RENSPA:</strong> ${l.renspa}</p>
+                            <p style="margin-bottom: 6px;"><strong style="color: #ffffff;">Volumen Verificado:</strong> ${l.volumenToneladas} TN</p>
+                            ${l.bfaHash ? `<p style="margin-bottom: 6px; font-size:0.8rem; color:#86efac;"><strong>Sello BFA:</strong> ${l.bfaHash.substring(0, 24)}...</p>` : '<p style="margin-bottom: 6px; font-size:0.8rem; color:#fde047;"><strong>Sello BFA:</strong> Pendiente de certificación</p>'}
+                            ${l.ipfsCID ? `<p style="margin-bottom: 8px;"><strong style="color: #ffffff;">CPE IPFS:</strong> <a href="http://127.0.0.1:8080/ipfs/${l.ipfsCID}" target="_blank" style="color:#4ade80; text-decoration: underline; font-weight: bold;">Ver Documento</a></p>` : ''}
+                            <p style="margin-top: 10px;"><a href="${verifUrl}" target="_blank" style="display: inline-block; background: #0284c7; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: bold;">🔍 Abrir Verificador Público / Desglose de Masa ↗</a></p>
                         </div>
                     `;
                     document.getElementById('lote-seleccionado-senasa').textContent = l.id;
                     document.getElementById('idLoteNotarizar').value = l.id;
                     formSenasa.style.display = 'block';
+                } else if (json.success && json.loteConsumido) {
+                    const lc = json.loteConsumido;
+                    const verifUrl = `${window.location.origin}${basePath}/verificador?id=${lc.id}`;
+                    resultDiv.innerHTML = `
+                        <div style="background: #451a03; border: 1px solid #b45309; padding: 15px; border-radius: 8px; color: #fef3c7; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <span style="font-size:1.4rem;">⛔</span>
+                                <strong style="color: #fde68a; font-size: 1rem;">Lote Consumido en Mezcla Posterior (${lc.estado})</strong>
+                            </div>
+                            <p style="font-size: 0.88rem; line-height: 1.4; margin-bottom: 8px; color: #fef3c7;">
+                                El lote <strong>${lc.id}</strong> (${lc.volumenToneladas} TN) es un nodo intermedio histórico. 
+                                Físicamente este grano ya fue volcado e integrado a una partida consolidada posterior.
+                            </p>
+                            <p style="font-size: 0.85rem; background: rgba(0,0,0,0.25); padding: 8px 10px; border-radius: 6px; border-left: 3px solid #f59e0b; margin-bottom: 10px;">
+                                <strong>Regla Fitosanitaria:</strong> Para prevenir fraude documental y doble certificación sanitaria, 
+                                <em>no admite emisión de Sello BFA ni bloqueo directo</em>. La certificación debe realizarse sobre la partida consolidada activa.
+                            </p>
+                            <a href="${verifUrl}" target="_blank" style="display: inline-block; background: #d97706; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: bold;">
+                                🔍 Ver Árbol de Trazabilidad y Partida Activa en Verificador Público ↗
+                            </a>
+                        </div>
+                    `;
+                    formSenasa.style.display = 'none';
                 } else {
-                    resultDiv.innerHTML = `<p style="color:#ef4444;">No se encontraron resultados.</p>`;
+                    resultDiv.innerHTML = `<p style="color:#ef4444; padding:10px; background:#450a0a; border-radius:6px; margin-top:10px;">No se encontraron lotes activos en estado ACONDICIONADO.</p>`;
                     formSenasa.style.display = 'none';
                 }
             } catch (e) {
@@ -569,36 +942,160 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Modal Bloqueo Fitosanitario (SENASA / ARCA)
+    window.abrirModalBloqueo = function() {
+        const idLote = (document.getElementById('idLoteNotarizar') ? document.getElementById('idLoteNotarizar').value : '').trim();
+        if (!idLote) {
+            showToast('Por favor seleccione una partida activa para auditar/bloquear.', 'warning');
+            alert('Debe seleccionar primero una partida activa para aplicar el bloqueo fitosanitario.');
+            return;
+        }
+
+        const modal = document.getElementById('modal-bloqueo');
+        const spanLote = document.getElementById('modal-bloqueo-lote-id');
+        const txtMotivo = document.getElementById('modal-bloqueo-motivo');
+
+        if (spanLote) spanLote.textContent = idLote;
+        if (txtMotivo) txtMotivo.value = '';
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => { if (txtMotivo) txtMotivo.focus(); }, 100);
+        }
+    };
+
+    window.cerrarModalBloqueo = function() {
+        const modal = document.getElementById('modal-bloqueo');
+        if (modal) modal.style.display = 'none';
+        const txtMotivo = document.getElementById('modal-bloqueo-motivo');
+        if (txtMotivo) txtMotivo.value = '';
+    };
+
+    window.ejecutarBloqueoSanitario = async function() {
+        const idLote = (document.getElementById('idLoteNotarizar') ? document.getElementById('idLoteNotarizar').value : '').trim() ||
+                       (document.getElementById('modal-bloqueo-lote-id') ? document.getElementById('modal-bloqueo-lote-id').textContent : '').trim();
+        const txtMotivo = document.getElementById('modal-bloqueo-motivo');
+        const motivo = (txtMotivo ? txtMotivo.value : '').trim();
+
+        if (!idLote) {
+            alert('No se ha detectado el identificador del lote a bloquear.');
+            return;
+        }
+        if (!motivo) {
+            alert('Debe ingresar el motivo oficial del bloqueo fitosanitario preventivo.');
+            if (txtMotivo) txtMotivo.focus();
+            return;
+        }
+
+        const btnConfirmar = document.getElementById('btn-confirmar-modal-bloqueo');
+        setLoadingState(btnConfirmar, true);
+
+        try {
+            const res = await fetch('http://localhost:3000/api/lotes/bloquear', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
+                },
+                body: JSON.stringify({ idLote, motivo })
+            });
+            const result = await res.json();
+            const feedbackContainer = document.getElementById('senasa-feedback-container');
+            const formSenasa = document.getElementById('notarizar-form');
+            const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+            const verifUrl = `${window.location.origin}${basePath}/verificador?id=${encodeURIComponent(idLote)}`;
+
+            if (result.success) {
+                window.cerrarModalBloqueo();
+                agregarLog(`<span class="success-text">🚫 [SENASA] Lote ${idLote} BLOQUEADO preventivamente. Motivo: ${motivo}</span>`);
+                showToast(`Lote ${idLote} bloqueado en ledger.`, 'warning');
+
+                if (feedbackContainer) {
+                    const fechaStr = result.timestamp ? new Date(result.timestamp).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
+                    feedbackContainer.innerHTML = `
+                        <div class="senasa-verification-card block-verified-card">
+                            <div class="verification-card-header">
+                                <span class="verification-badge-icon">🚫</span>
+                                <div>
+                                    <h3 class="verification-title">Alerta Fitosanitaria Activada y Bloqueo Efectuado</h3>
+                                    <p class="verification-subtitle">El lote ha sido inmovilizado cautelarmente en el ledger permisionado.</p>
+                                </div>
+                            </div>
+                            <div class="verification-details-grid">
+                                <div>
+                                    <strong>Lote Bloqueado</strong>
+                                    <span style="font-weight: 700; color: #ffffff;">${idLote}</span>
+                                </div>
+                                <div>
+                                    <strong>Nuevo Estado Logístico</strong>
+                                    <span><span class="badge" style="background:#dc2626; color:white; padding:3px 8px; border-radius:4px; font-weight:700;">BLOQUEADO</span></span>
+                                </div>
+                                <div style="grid-column: span 2;">
+                                    <strong>Motivo Fitosanitario Oficial</strong>
+                                    <span style="font-style: italic; color: #fecaca; margin-top: 2px;">"${motivo}"</span>
+                                </div>
+                                <div>
+                                    <strong>Organismo Regulador</strong>
+                                    <span>SENASA / ARCA</span>
+                                </div>
+                                <div>
+                                    <strong>Fecha y Hora</strong>
+                                    <span>${fechaStr}</span>
+                                </div>
+                                <div style="grid-column: span 2; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; border-left: 3px solid #f87171; margin-top: 4px;">
+                                    ⚠️ <strong>Efecto Inmediato:</strong> La máquina de estados del smart contract impide cualquier transporte, mezcla en silos o despacho a exportación para este volumen.
+                                </div>
+                            </div>
+                            <div class="verification-actions">
+                                <a href="${verifUrl}" target="_blank" class="btn-verify-external" style="background:#dc2626;">
+                                    🔍 Auditar Estado en Verificador Público ↗
+                                </a>
+                                <button type="button" class="btn-dismiss-verification" onclick="document.getElementById('senasa-feedback-container').style.display='none';">
+                                    ✓ Aceptar y Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    feedbackContainer.style.display = 'block';
+                    feedbackContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                if (formSenasa) formSenasa.style.display = 'none';
+                // Refrescar listado de partidas activas para que desaparezca el lote bloqueado
+                window.cargarDatosIniciales('Organismo de Control (SENASA/ARCA)');
+            } else {
+                agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR SENASA] ${result.error}</span>`);
+                alert(`Error al bloquear lote: ${result.error}`);
+            }
+        } catch (e) {
+            console.error(e);
+            agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR SENASA] Problema de red al procesar el bloqueo.</span>`);
+        }
+        setLoadingState(btnConfirmar, false);
+    };
+
     const btnBloquear = document.getElementById('btn-bloquear');
     if (btnBloquear) {
-        btnBloquear.addEventListener('click', async () => {
-            const idLote = document.getElementById('idLoteNotarizar').value;
-            const motivo = prompt("Ingrese el motivo del bloqueo fitosanitario:");
-            if (!motivo) return;
-
-            setLoadingState(btnBloquear, true);
-            try {
-                const res = await fetch('http://localhost:3000/api/lotes/bloquear', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + localStorage.getItem('agtech_token')
-                    },
-                    body: JSON.stringify({ idLote, motivo })
-                });
-                const result = await res.json();
-                if (result.success) {
-                    agregarLog(`<span class="success-text">🚫 [SENASA] Lote ${idLote} BLOQUEADO.</span>`);
-                    document.getElementById('btn-buscar-senasa').click(); // Refrescar
-                } else {
-                    agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR SENASA] ${result.error}</span>`);
-                }
-            } catch (e) {
-                console.error(e);
-            }
-            setLoadingState(btnBloquear, false);
+        btnBloquear.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.abrirModalBloqueo();
         });
     }
+
+    const txtMotivo = document.getElementById('modal-bloqueo-motivo');
+    if (txtMotivo) {
+        txtMotivo.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || !e.shiftKey)) {
+                e.preventDefault();
+                window.ejecutarBloqueoSanitario();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            window.cerrarModalBloqueo();
+        }
+    });
 
     // Interceptar envío de formulario Notarizar
     const formNotarizar = document.getElementById('notarizar-form');
@@ -618,10 +1115,68 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ idLote })
                 });
                 const result = await res.json();
+                const feedbackContainer = document.getElementById('senasa-feedback-container');
+                const formSenasa = document.getElementById('notarizar-form');
+                const basePath = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+                const verifUrl = `${window.location.origin}${basePath}/verificador?id=${encodeURIComponent(idLote)}`;
+
                 if (result.success) {
-                    agregarLog(`<span class="success-text">✅ [BFA] Notarización asíncrona iniciada para ${idLote}.</span>`);
+                    const bfaHash = result.bfaHash || 'N/A';
+                    const fechaStr = result.timestamp ? new Date(result.timestamp).toLocaleString('es-AR') : new Date().toLocaleString('es-AR');
+
+                    agregarLog(`<span class="success-text">✅ [BFA] Sello Notarial emitido para ${idLote}. Hash: ${bfaHash.substring(0, 20)}...</span>`);
+
+                    if (feedbackContainer) {
+                        feedbackContainer.innerHTML = `
+                            <div class="senasa-verification-card bfa-verified-card">
+                                <div class="verification-card-header">
+                                    <span class="verification-badge-icon">🛡️</span>
+                                    <div>
+                                        <h3 class="verification-title">Sello Notarial BFA Emitido Correctamente</h3>
+                                        <p class="verification-subtitle">Evidencia criptográfica inmutable estampada en la Blockchain Federal Argentina.</p>
+                                    </div>
+                                </div>
+                                <div class="verification-details-grid">
+                                    <div>
+                                        <strong>Lote Notarizado</strong>
+                                        <span style="font-weight: 700; color: #ffffff;">${idLote}</span>
+                                    </div>
+                                    <div>
+                                        <strong>Estado de Partida</strong>
+                                        <span><span class="badge" style="background:#0284c7; color:white; padding:3px 8px; border-radius:4px; font-weight:700;">ACONDICIONADO (Certificado BFA)</span></span>
+                                    </div>
+                                    <div>
+                                        <strong>Entidad Notarial</strong>
+                                        <span>${result.entidad || 'SENASA / ARCA'}</span>
+                                    </div>
+                                    <div>
+                                        <strong>Fecha y Hora de Estampado</strong>
+                                        <span>${fechaStr}</span>
+                                    </div>
+                                </div>
+                                <div class="verification-hash-box">
+                                    <span class="hash-label">BFA RECEIPT HASH SHA-256 (EVIDENCIA INMUTABLE):</span>
+                                    <span class="hash-code">${bfaHash}</span>
+                                </div>
+                                <div class="verification-actions">
+                                    <a href="${verifUrl}" target="_blank" class="btn-verify-external">
+                                        🔍 Auditar en Verificador Público QR ↗
+                                    </a>
+                                    <button type="button" class="btn-dismiss-verification" onclick="document.getElementById('senasa-feedback-container').style.display='none';">
+                                        ✓ Aceptar y Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        feedbackContainer.style.display = 'block';
+                    }
+
+                    if (formSenasa) formSenasa.style.display = 'none';
+                    // Refrescar listado activo para que muestre el badge de sellado BFA
+                    window.cargarDatosIniciales('Organismo de Control (SENASA/ARCA)');
                 } else {
                     agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR BFA] Lote ${idLote}: ${result.error}</span>`);
+                    alert(`Error al emitir sello BFA: ${result.error}`);
                 }
             } catch (error) {
                 console.error('Error al notarizar:', error);
