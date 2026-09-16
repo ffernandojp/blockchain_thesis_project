@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px;">
                         <div><strong>Contrato:</strong> <span class="hash" style="font-size: 0.8rem;">${contractAddress}</span></div>
                         <div><strong>Token ID:</strong> <span class="badge polygon" style="padding: 2px 6px;">#${tokenId !== null ? tokenId : '0'}</span></div>
-                        ${effectiveTxHash ? `<div><strong>TX:</strong> <a href="#" onclick="alert('Transacción verificada en Hardhat/Polygon EVM:\\nHash: ${effectiveTxHash}\\nContrato: ${contractAddress}\\nToken ID: #${tokenId !== null ? tokenId : 0}'); return false;" class="hash" style="color: var(--bfa-secondary);">${effectiveTxHash.substring(0, 22)}...</a></div>` : ''}
+                        ${effectiveTxHash ? `<div><strong>TX:</strong> <a href="#" onclick="window.mostrarModalTransaccion('${effectiveTxHash}', '${contractAddress}', '${tokenId !== null ? tokenId : 0}'); return false;" class="hash" style="color: var(--bfa-secondary); text-decoration: underline; cursor: pointer;">${effectiveTxHash.substring(0, 22)}...</a></div>` : ''}
                     </div>
                 `;
             } else {
@@ -813,3 +813,89 @@ document.addEventListener('DOMContentLoaded', async () => {
         section.innerHTML = treeHtml;
     }
 });
+
+// Modal Moderno de Detalles Web3 On-Chain (Reemplazo de alert nativo)
+window.mostrarModalTransaccion = function (txHash, contractAddress, tokenId) {
+    let modal = document.getElementById('web3-modal-overlay');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'web3-modal-overlay';
+        modal.className = 'web3-modal-overlay';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+        <div class="web3-modal-card">
+            <div class="web3-modal-header">
+                <div class="web3-modal-icon">⛓️</div>
+                <div>
+                    <h3 class="web3-modal-title">Transacción Verificada en Blockchain</h3>
+                    <p class="web3-modal-subtitle">Red Hardhat / Polygon EVM • Protocolo Notarial BFA</p>
+                </div>
+            </div>
+
+            <div class="web3-field-group">
+                <label class="web3-field-label">Hash de Transacción (TX)</label>
+                <div class="web3-field-box">
+                    <span>${txHash}</span>
+                    <button type="button" class="web3-copy-btn" onclick="window.copiarTexto('${txHash}', this)">Copiar</button>
+                </div>
+            </div>
+
+            <div class="web3-field-group">
+                <label class="web3-field-label">Contrato Inteligente ERC-721</label>
+                <div class="web3-field-box">
+                    <span>${contractAddress}</span>
+                    <button type="button" class="web3-copy-btn" onclick="window.copiarTexto('${contractAddress}', this)">Copiar</button>
+                </div>
+            </div>
+
+            <div class="web3-field-group">
+                <label class="web3-field-label">Token ID Oficial</label>
+                <div class="web3-field-box" style="font-weight: 700; color: var(--bfa-primary);">
+                    <span>#${tokenId}</span>
+                    <span style="background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">NFT Inmutable</span>
+                </div>
+            </div>
+
+            <div class="web3-modal-footer">
+                <button type="button" class="web3-btn-close" onclick="window.cerrarModalTransaccion()">Cerrar</button>
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('active');
+
+    const handleKey = (e) => {
+        if (e.key === 'Escape') window.cerrarModalTransaccion();
+    };
+    document.addEventListener('keydown', handleKey, { once: true });
+    modal.onclick = (e) => {
+        if (e.target === modal) window.cerrarModalTransaccion();
+    };
+};
+
+window.cerrarModalTransaccion = function () {
+    const modal = document.getElementById('web3-modal-overlay');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+};
+
+window.copiarTexto = function (texto, btn) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto).then(() => {
+            const orig = btn.textContent;
+            btn.textContent = '✓ Copiado';
+            btn.style.background = '#dcfce7';
+            btn.style.color = '#15803d';
+            setTimeout(() => {
+                btn.textContent = orig;
+                btn.style.background = '';
+                btn.style.color = '';
+            }, 1800);
+        }).catch(err => {
+            console.warn('Error al copiar texto:', err);
+        });
+    }
+};

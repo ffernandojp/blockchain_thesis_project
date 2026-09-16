@@ -1086,3 +1086,148 @@ a.view-link:hover {
     gap: 10px;
 }
 
+/* ==========================================================================
+   MODAL DE DETALLE CRIPTOGRÁFICO WEB3 (VERIFICADOR PÚBLICO)
+   ========================================================================== */
+.web3-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 25, 50, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.web3-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.web3-modal-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 24px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 25px 50px -12px rgba(0, 75, 135, 0.25), 0 0 20px rgba(0, 160, 223, 0.15);
+    border: 1px solid rgba(0, 160, 223, 0.25);
+    transform: scale(0.92) translateY(12px);
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+}
+
+.web3-modal-overlay.active .web3-modal-card {
+    transform: scale(1) translateY(0);
+}
+
+.web3-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.web3-modal-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(0, 75, 135, 0.1), rgba(0, 160, 223, 0.2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: var(--bfa-primary);
+    flex-shrink: 0;
+}
+
+.web3-modal-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--bfa-primary);
+}
+
+.web3-modal-subtitle {
+    margin: 2px 0 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.web3-field-group {
+    margin-bottom: 14px;
+}
+
+.web3-field-label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.web3-field-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: monospace;
+    font-size: 0.82rem;
+    color: #1e293b;
+    word-break: break-all;
+}
+
+.web3-copy-btn {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 8px;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+.web3-copy-btn:hover {
+    background: #bae6fd;
+}
+
+.web3-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.web3-btn-close {
+    background: var(--bfa-primary);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.web3-btn-close:hover {
+    background: #003360;
+}
+

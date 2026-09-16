@@ -1,7 +1,7 @@
 // sw.js - Service Worker
 // Maneja el caché de los estáticos para permitir la carga offline.
 
-const CACHE_NAME = 'agtech-v7';
+const CACHE_NAME = 'agtech-v8';
 const ASSETS = [
     './',
     './app.js',

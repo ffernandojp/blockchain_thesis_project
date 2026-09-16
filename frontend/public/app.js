@@ -19,6 +19,164 @@ window.showToast = function (message, type = 'success') {
     }, 4000);
 };
 
+// Sistema de Modales Modernos AgTech (Reemplazo de alert() y confirm() del navegador)
+window.showCustomAlert = function (options = {}) {
+    if (typeof options === 'string') {
+        options = { message: options };
+    }
+    const {
+        title = (options.type === 'warning' ? 'Atención' : options.type === 'info' ? 'Información' : 'Error del Sistema'),
+        message = '',
+        type = 'error',
+        buttonText = 'Entendido'
+    } = options;
+
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('agtech-modal-overlay');
+        const card = document.getElementById('agtech-modal-card');
+        const iconEl = document.getElementById('agtech-modal-icon');
+        const titleEl = document.getElementById('agtech-modal-title');
+        const subtitleEl = document.getElementById('agtech-modal-subtitle');
+        const bodyEl = document.getElementById('agtech-modal-body');
+        const btnCancel = document.getElementById('agtech-modal-btn-cancel');
+        const btnConfirm = document.getElementById('agtech-modal-btn-confirm');
+
+        if (!overlay || !card) {
+            alert(message);
+            return resolve(true);
+        }
+
+        card.className = `agtech-modal-card type-${type}`;
+        const icons = {
+            error: '🚨',
+            warning: '⚠️',
+            info: 'ℹ️',
+            success: '✅'
+        };
+        if (iconEl) iconEl.textContent = icons[type] || 'ℹ️';
+        if (titleEl) titleEl.textContent = title;
+        if (subtitleEl) subtitleEl.textContent = type === 'error' ? 'Acción Requerida' : type === 'warning' ? 'Validación Fitosanitaria' : 'Aviso AgTech';
+        if (bodyEl) bodyEl.innerHTML = message;
+
+        if (btnCancel) btnCancel.style.display = 'none';
+        if (btnConfirm) {
+            btnConfirm.textContent = buttonText;
+            btnConfirm.className = `agtech-modal-btn ${type === 'error' ? 'agtech-modal-btn-danger' : 'agtech-modal-btn-primary'}`;
+        }
+
+        overlay.classList.add('active');
+        if (btnConfirm) btnConfirm.focus();
+
+        const cleanup = () => {
+            overlay.classList.remove('active');
+            if (btnConfirm) btnConfirm.removeEventListener('click', onConfirm);
+            document.removeEventListener('keydown', onKeyDown);
+            overlay.removeEventListener('click', onOverlayClick);
+            resolve(true);
+        };
+
+        const onConfirm = () => cleanup();
+        const onOverlayClick = (e) => {
+            if (e.target === overlay) cleanup();
+        };
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape' || e.key === 'Enter') cleanup();
+        };
+
+        if (btnConfirm) btnConfirm.addEventListener('click', onConfirm);
+        overlay.addEventListener('click', onOverlayClick);
+        document.addEventListener('keydown', onKeyDown);
+    });
+};
+
+window.showCustomConfirm = function (options = {}) {
+    if (typeof options === 'string') {
+        options = { message: options };
+    }
+    const {
+        title = '¿Confirmar Operación?',
+        message = '',
+        type = 'info',
+        confirmText = 'Confirmar',
+        cancelText = 'Cancelar'
+    } = options;
+
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('agtech-modal-overlay');
+        const card = document.getElementById('agtech-modal-card');
+        const iconEl = document.getElementById('agtech-modal-icon');
+        const titleEl = document.getElementById('agtech-modal-title');
+        const subtitleEl = document.getElementById('agtech-modal-subtitle');
+        const bodyEl = document.getElementById('agtech-modal-body');
+        const btnCancel = document.getElementById('agtech-modal-btn-cancel');
+        const btnConfirm = document.getElementById('agtech-modal-btn-confirm');
+
+        if (!overlay || !card) {
+            return resolve(confirm(message));
+        }
+
+        card.className = `agtech-modal-card type-${type}`;
+        const icons = {
+            error: '🚨',
+            warning: '⚠️',
+            info: '⚓',
+            success: '✅'
+        };
+        if (iconEl) iconEl.textContent = icons[type] || '⚠️';
+        if (titleEl) titleEl.textContent = title;
+        if (subtitleEl) subtitleEl.textContent = 'Verificación Requerida';
+        if (bodyEl) bodyEl.innerHTML = message;
+
+        if (btnCancel) {
+            btnCancel.style.display = 'inline-flex';
+            btnCancel.textContent = cancelText;
+        }
+        if (btnConfirm) {
+            btnConfirm.textContent = confirmText;
+            btnConfirm.className = `agtech-modal-btn ${type === 'error' ? 'agtech-modal-btn-danger' : 'agtech-modal-btn-primary'}`;
+        }
+
+        overlay.classList.add('active');
+        if (btnConfirm) btnConfirm.focus();
+
+        const cleanup = (confirmed) => {
+            overlay.classList.remove('active');
+            if (btnConfirm) btnConfirm.removeEventListener('click', onConfirm);
+            if (btnCancel) btnCancel.removeEventListener('click', onCancel);
+            document.removeEventListener('keydown', onKeyDown);
+            overlay.removeEventListener('click', onOverlayClick);
+            resolve(confirmed);
+        };
+
+        const onConfirm = () => cleanup(true);
+        const onCancel = () => cleanup(false);
+        const onOverlayClick = (e) => {
+            if (e.target === overlay) cleanup(false);
+        };
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') cleanup(false);
+            if (e.key === 'Enter') cleanup(true);
+        };
+
+        if (btnConfirm) btnConfirm.addEventListener('click', onConfirm);
+        if (btnCancel) btnCancel.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlayClick);
+        document.addEventListener('keydown', onKeyDown);
+    });
+};
+
+// Autocompletado de perfiles demo en la pantalla de inicio
+window.seleccionarPerfilDemo = function (username, password) {
+    const userInp = document.getElementById('login-user');
+    const passInp = document.getElementById('login-pass');
+    if (userInp && passInp) {
+        userInp.value = username;
+        passInp.value = password;
+        userInp.focus();
+        showToast(`Perfil cargado: ${username}`, 'info');
+    }
+};
+
 // Obtener perfil autenticado actual (deserializado de localStorage o decodificado del JWT)
 window.obtenerUsuarioActual = function () {
     const token = localStorage.getItem('agtech_token');
@@ -89,7 +247,7 @@ window.renderizarSelectorRenspa = function (user) {
                 }
             });
         }
-    } 
+    }
     // Caso 2: Productor multi-establecimiento (1:N campos)
     // El formulario renderiza un selector desplegable (<select>) precargado con los RENSPA y alias de los campos
     else if (campos.length > 1) {
@@ -120,7 +278,7 @@ window.renderizarSelectorRenspa = function (user) {
                 }
             });
         }
-    } 
+    }
     // Fallback genérico si no hay sesión o no es productor
     else {
         contenedor.innerHTML = `
@@ -603,9 +761,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </p>
                                 <div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto;">
                                     ${lotesSenasa.map(l => {
-                                        const verifUrl = `${window.location.origin}${basePath}/verificador?id=${l.id}`;
-                                        const tieneBFA = !!l.bfaHash;
-                                        return `
+                                const verifUrl = `${window.location.origin}${basePath}/verificador?id=${l.id}`;
+                                const tieneBFA = !!l.bfaHash;
+                                return `
                                             <div class="lot-card senasa-lot-card" data-id="${l.id}" style="cursor: pointer; background: #132a13; border: 1px solid #2d6a4f; padding: 10px 14px; border-radius: 6px;">
                                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                                     <div>
@@ -625,7 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 </div>
                                             </div>
                                         `;
-                                    }).join('')}
+                            }).join('')}
                                 </div>
                             `;
 
@@ -805,10 +963,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 agregarLog(`<span class="success-text">✅ Sesión iniciada como ${data.rol} (${data.cuit || username})</span>`);
                 showToast(`Sesión iniciada: ${username}`, 'success');
             } else {
-                alert("Error de login: " + data.error);
+                window.showCustomAlert({
+                    title: 'Error de Autenticación',
+                    message: `No fue posible iniciar sesión: <strong>${data.error || 'Credenciales no válidas'}</strong>.<br><span style="color:#94a3b8; font-size:0.85rem;">Por favor verifique el usuario institucional y la contraseña ingresada.</span>`,
+                    type: 'error',
+                    buttonText: 'Reintentar'
+                });
             }
         } catch (err) {
-            alert("Error de red al intentar loguearse");
+            console.error('Error de red al intentar loguearse:', err);
+            window.showCustomAlert({
+                title: 'Error de Red / Conectividad',
+                message: 'No se pudo conectar con el servidor backend central (Node.js en puerto 3000).<br><span style="color:#94a3b8; font-size:0.85rem;">Verifique que el servicio esté ejecutándose o revise su conexión a la red local.</span>',
+                type: 'error',
+                buttonText: 'Cerrar'
+            });
         }
     });
 
@@ -1212,11 +1381,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Modal Bloqueo Fitosanitario (SENASA / ARCA)
-    window.abrirModalBloqueo = function() {
+    window.abrirModalBloqueo = function () {
         const idLote = (document.getElementById('idLoteNotarizar') ? document.getElementById('idLoteNotarizar').value : '').trim();
         if (!idLote) {
             showToast('Por favor seleccione una partida activa para auditar/bloquear.', 'warning');
-            alert('Debe seleccionar primero una partida activa para aplicar el bloqueo fitosanitario.');
+            window.showCustomAlert({
+                title: 'Partida No Seleccionada',
+                message: 'Debe seleccionar primero una partida activa del listado oficial para poder aplicar el <strong>bloqueo fitosanitario preventivo</strong>.',
+                type: 'warning',
+                buttonText: 'Entendido'
+            });
             return;
         }
 
@@ -1232,25 +1406,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.cerrarModalBloqueo = function() {
+    window.cerrarModalBloqueo = function () {
         const modal = document.getElementById('modal-bloqueo');
         if (modal) modal.style.display = 'none';
         const txtMotivo = document.getElementById('modal-bloqueo-motivo');
         if (txtMotivo) txtMotivo.value = '';
     };
 
-    window.ejecutarBloqueoSanitario = async function() {
+    window.ejecutarBloqueoSanitario = async function () {
         const idLote = (document.getElementById('idLoteNotarizar') ? document.getElementById('idLoteNotarizar').value : '').trim() ||
-                       (document.getElementById('modal-bloqueo-lote-id') ? document.getElementById('modal-bloqueo-lote-id').textContent : '').trim();
+            (document.getElementById('modal-bloqueo-lote-id') ? document.getElementById('modal-bloqueo-lote-id').textContent : '').trim();
         const txtMotivo = document.getElementById('modal-bloqueo-motivo');
         const motivo = (txtMotivo ? txtMotivo.value : '').trim();
 
         if (!idLote) {
-            alert('No se ha detectado el identificador del lote a bloquear.');
+            window.showCustomAlert({
+                title: 'Identificador No Detectado',
+                message: 'No se ha detectado el identificador del lote a bloquear. Vuelva a seleccionar la partida desde la lista.',
+                type: 'warning'
+            });
             return;
         }
         if (!motivo) {
-            alert('Debe ingresar el motivo oficial del bloqueo fitosanitario preventivo.');
+            window.showCustomAlert({
+                title: 'Motivo Requerido',
+                message: 'Debe ingresar el <strong>motivo oficial</strong> del bloqueo fitosanitario preventivo para que quede asentado en el registro inmutable.',
+                type: 'warning',
+                buttonText: 'Ingresar Motivo'
+            });
             if (txtMotivo) txtMotivo.focus();
             return;
         }
@@ -1333,7 +1516,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.cargarDatosIniciales('Organismo de Control (SENASA/ARCA)');
             } else {
                 agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR SENASA] ${result.error}</span>`);
-                alert(`Error al bloquear lote: ${result.error}`);
+                window.showCustomAlert({
+                    title: 'Fallo al Inmovilizar Lote',
+                    message: `No fue posible registrar el bloqueo en el ledger: <strong>${result.error}</strong>`,
+                    type: 'error'
+                });
             }
         } catch (e) {
             console.error(e);
@@ -1527,7 +1714,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.cargarDatosIniciales('Organismo de Control (SENASA/ARCA)');
                 } else {
                     agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR BFA] Lote ${idLote}: ${result.error}</span>`);
-                    alert(`Error al emitir sello BFA: ${result.error}`);
+                    window.showCustomAlert({
+                        title: 'Error de Notarización BFA',
+                        message: `No se pudo emitir el sello criptográfico BFA: <strong>${result.error}</strong>`,
+                        type: 'error'
+                    });
                 }
             } catch (error) {
                 console.error('Error al notarizar:', error);
@@ -1539,7 +1730,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handlers globales para Terminal Portuaria y Despacho de Exportación
     window.confirmarArriboConvoy = async function (idLote) {
-        if (!confirm(`¿Confirmar arribo físico del convoy ${idLote} a la terminal portuaria y validar la CPE de descarga?`)) return;
+        const confirmado = await window.showCustomConfirm({
+            title: 'Confirmar Arribo Portuario',
+            message: `¿Desea confirmar el arribo físico del convoy <strong>${idLote}</strong> a la terminal portuaria y validar definitivamente la CPE de descarga?`,
+            type: 'info',
+            confirmText: 'Confirmar Arribo y CPE',
+            cancelText: 'Cancelar'
+        });
+        if (!confirmado) return;
         try {
             const res = await fetch('http://localhost:3000/api/lotes/arribo-puerto', {
                 method: 'POST',

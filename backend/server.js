@@ -74,7 +74,9 @@ const HARDHAT_RPC = "http://127.0.0.1:8545";
 // IMPORTANTE: Modifica esta dirección con el address generado al correr "npx hardhat run scripts/deploy.js"
 const NFT_CONTRACT_ADDRESS = process.env.NFT_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 const NFT_ABI = [
-  "function emitirCertificadoExportacion(address exportador, string memory uri) public returns (uint256)"
+  "function emitirCertificadoExportacion(address exportador, string memory uri) public returns (uint256)",
+  "event LoteExportado(address indexed exportador, uint256 indexed tokenId, string uri)",
+  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
 ];
 
 const app = express();
