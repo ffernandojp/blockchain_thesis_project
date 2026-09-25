@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
+    color-scheme: light dark;
     --primary-color: #1b4332; /* Deep green */
     --primary-light: #2d6a4f;
     --primary-dark: #081c15;
@@ -211,7 +212,8 @@ label {
 input[type="text"],
 input[type="password"],
 input[type="number"],
-input[type="file"] {
+select,
+.form-select {
     width: 100%;
     padding: 12px 16px;
     border: 1px solid #ced4da;
@@ -220,6 +222,301 @@ input[type="file"] {
     font-size: 0.95rem;
     transition: var(--transition);
     background-color: #f8f9fa;
+    color: #212529;
+}
+
+/* File input con soporte robusto para modo claro, oscuro y extensiones (Dark Reader, etc.) */
+input[type="file"] {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: var(--transition);
+    background-color: #f8f9fa;
+    color: inherit;
+    cursor: pointer;
+    display: block;
+}
+
+input[type="file"]::file-selector-button,
+input[type="file"]::-webkit-file-upload-button {
+    padding: 7px 16px;
+    margin-right: 14px;
+    background-color: #2d6a4f;
+    color: #ffffff !important;
+    border: 1px solid #1b4332;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+input[type="file"]::file-selector-button:hover,
+input[type="file"]::-webkit-file-upload-button:hover {
+    background-color: #1b4332;
+}
+
+/* Tarjeta / Badge de previsualización del archivo seleccionado */
+.file-preview-card {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background-color: #edf7ee;
+    border: 1px solid #b7e4c7;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.file-preview-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.file-preview-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.file-preview-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #1b4332;
+}
+
+.file-preview-size {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+    background-color: #d8f3dc;
+    color: #2d6a4f;
+    border-radius: 4px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.file-preview-remove {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #b91c1c;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 6px;
+    line-height: 1;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.file-preview-remove:hover {
+    background-color: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+/* Wrapper para selector con flecha CSS pura sin background-image (evita bugs de Dark Reader / extensiones) */
+.select-wrapper {
+    position: relative;
+    width: 100%;
+    display: block;
+}
+
+.select-wrapper::after {
+    content: '';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-65%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #2d6a4f;
+    border-bottom: 2px solid #2d6a4f;
+    pointer-events: none;
+    transition: var(--transition);
+}
+
+select,
+.form-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 42px;
+    cursor: pointer;
+    background-image: none !important;
+}
+
+select option,
+.form-select option {
+    background-color: #ffffff;
+    color: #212529;
+}
+
+/* Compatibilidad total con Modo Oscuro nativo y extensiones (Dark Reader, Night Eye, etc.) */
+@media (prefers-color-scheme: dark) {
+    select,
+    .form-select,
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    input[type="file"] {
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+        border-color: #475569 !important;
+    }
+    input[type="file"]::file-selector-button,
+    input[type="file"]::-webkit-file-upload-button {
+        background-color: #2d6a4f !important;
+        color: #ffffff !important;
+        border-color: #4ade80 !important;
+    }
+    input[type="file"]::file-selector-button:hover,
+    input[type="file"]::-webkit-file-upload-button:hover {
+        background-color: #1b4332 !important;
+    }
+    .select-wrapper::after {
+        border-color: #4ade80 !important;
+    }
+    select option,
+    .form-select option {
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+    }
+    .file-preview-card {
+        background-color: #132a22 !important;
+        border-color: #2d6a4f !important;
+    }
+    .file-preview-name {
+        color: #f1f5f9 !important;
+    }
+    .file-preview-size {
+        background-color: #1e3a2b !important;
+        color: #4ade80 !important;
+        border: 1px solid #2d6a4f !important;
+    }
+    .file-preview-remove {
+        color: #fca5a5 !important;
+    }
+    .file-preview-remove:hover {
+        background-color: #451a1a !important;
+        color: #f87171 !important;
+        border-color: #991b1b !important;
+    }
+}
+
+/* Reglas explícitas para Dark Reader y extensiones compatibles */
+[data-darkreader-scheme="dark"] select,
+[data-darkreader-scheme="dark"] .form-select,
+[data-darkreader-scheme="dark"] input[type="file"],
+html[data-darkreader-mode] select,
+html[data-darkreader-mode] .form-select,
+html[data-darkreader-mode] input[type="file"],
+body[data-darkreader-mode] select,
+body[data-darkreader-mode] .form-select,
+body[data-darkreader-mode] input[type="file"] {
+    background-color: #181a1b !important;
+    color: #f8fafc !important;
+    border-color: #3e4446 !important;
+    background-image: none !important;
+}
+
+[data-darkreader-scheme="dark"] input[type="file"]::file-selector-button,
+[data-darkreader-scheme="dark"] input[type="file"]::-webkit-file-upload-button,
+html[data-darkreader-mode] input[type="file"]::file-selector-button,
+html[data-darkreader-mode] input[type="file"]::-webkit-file-upload-button,
+body[data-darkreader-mode] input[type="file"]::file-selector-button,
+body[data-darkreader-mode] input[type="file"]::-webkit-file-upload-button {
+    background-color: #2d6a4f !important;
+    color: #ffffff !important;
+    border: 1px solid #4ade80 !important;
+}
+
+[data-darkreader-scheme="dark"] .file-preview-card,
+html[data-darkreader-mode] .file-preview-card,
+body[data-darkreader-mode] .file-preview-card {
+    background-color: #162a20 !important;
+    border-color: #2d6a4f !important;
+}
+
+[data-darkreader-scheme="dark"] .file-preview-name,
+html[data-darkreader-mode] .file-preview-name,
+body[data-darkreader-mode] .file-preview-name {
+    color: #f1f5f9 !important;
+}
+
+[data-darkreader-scheme="dark"] .file-preview-size,
+html[data-darkreader-mode] .file-preview-size,
+body[data-darkreader-mode] .file-preview-size {
+    background-color: #1e3a2b !important;
+    color: #4ade80 !important;
+    border: 1px solid #2d6a4f !important;
+}
+
+[data-darkreader-scheme="dark"] .file-preview-remove,
+html[data-darkreader-mode] .file-preview-remove,
+body[data-darkreader-mode] .file-preview-remove {
+    color: #fca5a5 !important;
+}
+
+[data-darkreader-scheme="dark"] .select-wrapper::after,
+html[data-darkreader-mode] .select-wrapper::after,
+body[data-darkreader-mode] .select-wrapper::after {
+    border-color: #4ade80 !important;
+}
+
+[data-darkreader-scheme="dark"] option,
+html[data-darkreader-mode] option,
+body[data-darkreader-mode] option {
+    background-color: #181a1b !important;
+    color: #e8e6e3 !important;
+}
+
+input[readonly],
+input.readonly-field {
+    background-color: #e9ecef !important;
+    border-color: #ced4da !important;
+    color: #2d6a4f !important;
+    font-weight: 600;
+    cursor: not-allowed;
+}
+
+.renspa-badge-mono {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(45, 106, 79, 0.12);
+    border: 1px solid #40916c;
+    border-radius: 6px;
+    color: #2d6a4f;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+.renspa-badge-multi {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(252, 163, 17, 0.12);
+    border: 1px solid #fca311;
+    border-radius: 6px;
+    color: #b45309;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 6px;
 }
 
 input:focus {
@@ -385,6 +682,7 @@ input::placeholder {
 }
 
 .toast.success { border-left: 4px solid #4ade80; }
+.toast.info { border-left: 4px solid #38bdf8; }
 .toast.warning { border-left: 4px solid #fca311; }
 .toast.error { border-left: 4px solid #ef4444; }
 
@@ -465,4 +763,827 @@ input::placeholder {
     text-transform: uppercase;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Tarjetas de Verificación Regulatoria (SENASA / BFA) */
+.senasa-verification-card {
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    animation: slideDown 0.35s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bfa-verified-card {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+    border: 2px solid #10b981;
+    color: #ecfdf5;
+}
+
+.block-verified-card {
+    background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+    border: 2px solid #ef4444;
+    color: #fef2f2;
+}
+
+.verification-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.verification-badge-icon {
+    font-size: 2.2rem;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.verification-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.3px;
+}
+
+.bfa-verified-card .verification-title {
+    color: #6ee7b7;
+}
+
+.block-verified-card .verification-title {
+    color: #fca5a5;
+}
+
+.verification-subtitle {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+.verification-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    font-size: 0.88rem;
+    margin-bottom: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 12px 14px;
+    border-radius: 8px;
+}
+
+.verification-details-grid div {
+    display: flex;
+    flex-direction: column;
+}
+
+.verification-details-grid strong {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    opacity: 0.8;
+    margin-bottom: 2px;
+}
+
+.verification-hash-box {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+}
+
+.hash-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #a7f3d0;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.hash-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.82rem;
+    color: #ffffff;
+    word-break: break-all;
+    user-select: all;
+}
+
+.verification-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-verify-external {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #0284c7;
+    color: #ffffff !important;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: var(--transition);
+}
+
+.btn-verify-external:hover {
+    background: #0369a1;
+    transform: translateY(-1px);
+}
+
+.btn-dismiss-verification {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.btn-dismiss-verification:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Estilos para Habilitación de Embarque y Convoys Portuarios */
+.embarque-card {
+    background: #112a20;
+    border: 1px solid #2d6a4f;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+    transition: var(--transition);
+}
+
+.embarque-card.habilitado {
+    border-color: #10b981;
+    background: linear-gradient(135deg, rgba(6, 78, 59, 0.25) 0%, rgba(17, 42, 32, 0.9) 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.embarque-card.incompleto {
+    border-color: #f59e0b;
+    background: linear-gradient(135deg, rgba(120, 53, 15, 0.15) 0%, rgba(17, 42, 32, 0.9) 100%);
+}
+
+.embarque-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.badge-puerto {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    background: #0284c7;
+    color: white;
+}
+
+.badge-puerto.quequen {
+    background: #0d9488;
+}
+
+.badge-puerto.bahia {
+    background: #0284c7;
+}
+
+.checks-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 12px 0;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.check-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+}
+
+.check-item.ok {
+    color: #4ade80;
+}
+
+.check-item.fail {
+    color: #f87171;
+}
+
+.badge-habilitado-tag {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.badge-habilitado-tag.ok {
+    background: #059669;
+    color: #ffffff;
+}
+
+.badge-habilitado-tag.pend {
+    background: #b45309;
+    color: #fef3c7;
+}
+
+/* ==========================================================================
+   SISTEMA DE MODALES MODERNOS (AGTECH DIALOGS)
+   ========================================================================== */
+.agtech-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 18, 13, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.agtech-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.agtech-modal-card {
+    background: #0f1c16;
+    border: 1px solid rgba(74, 222, 128, 0.25);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 35px rgba(45, 106, 79, 0.2);
+    transform: scale(0.92) translateY(12px);
+    transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+}
+
+.agtech-modal-overlay.active .agtech-modal-card {
+    transform: scale(1) translateY(0);
+}
+
+.agtech-modal-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.agtech-modal-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.agtech-modal-card.type-error .agtech-modal-icon-wrap {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #f87171;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
+}
+.agtech-modal-card.type-error {
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+.agtech-modal-card.type-warning .agtech-modal-icon-wrap {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fbbf24;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+}
+.agtech-modal-card.type-warning {
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+.agtech-modal-card.type-info .agtech-modal-icon-wrap {
+    background: rgba(42, 157, 143, 0.15);
+    border: 1px solid rgba(42, 157, 143, 0.35);
+    color: #48e5d2;
+    box-shadow: 0 0 16px rgba(42, 157, 143, 0.25);
+}
+.agtech-modal-card.type-info {
+    border-color: rgba(42, 157, 143, 0.35);
+}
+
+.agtech-modal-card.type-success .agtech-modal-icon-wrap {
+    background: rgba(74, 222, 128, 0.15);
+    border: 1px solid rgba(74, 222, 128, 0.35);
+    color: #4ade80;
+    box-shadow: 0 0 16px rgba(74, 222, 128, 0.25);
+}
+.agtech-modal-card.type-success {
+    border-color: rgba(74, 222, 128, 0.35);
+}
+
+.agtech-modal-header-text {
+    flex: 1;
+}
+
+.agtech-modal-title {
+    margin: 0 0 4px 0;
+    font-size: 1.18rem;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: -0.3px;
+    line-height: 1.3;
+}
+
+.agtech-modal-subtitle {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.agtech-modal-body {
+    font-size: 0.93rem;
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin-bottom: 22px;
+    padding-left: 62px;
+    word-break: break-word;
+}
+
+@media (max-width: 520px) {
+    .agtech-modal-body {
+        padding-left: 0;
+    }
+}
+
+.agtech-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.agtech-modal-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    border: none;
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.agtech-modal-btn-cancel {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+}
+
+.agtech-modal-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+}
+
+.agtech-modal-btn-primary {
+    background: linear-gradient(135deg, #2d6a4f, #1b4332);
+    border: 1px solid #4ade80;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(45, 106, 79, 0.35);
+}
+
+.agtech-modal-btn-primary:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(45, 106, 79, 0.5);
+}
+
+.agtech-modal-btn-danger {
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    border: 1px solid #f87171;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+}
+
+.agtech-modal-btn-danger:hover {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(220, 38, 38, 0.5);
+}
+
+/* ==========================================================================
+   ESTILOS PERFILES DE DEMOSTRACIÓN (LOGIN INTERACTIVO)
+   ========================================================================== */
+.demo-profiles-container {
+    margin-top: 22px;
+    padding: 16px 18px;
+    background: #f0fdf4;
+    border: 1.5px solid #86efac;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    box-shadow: 0 2px 6px rgba(20, 83, 45, 0.06);
+}
+
+.demo-profiles-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #bbf7d0;
+}
+
+.demo-profiles-title {
+    color: #14532d;
+    font-size: 0.88rem;
+    font-weight: 700;
+    display: block;
+}
+
+.demo-profiles-subtitle {
+    font-size: 0.74rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+.demo-profiles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.demo-profile-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.45;
+}
+
+.demo-profile-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #1b4332;
+    border: 1px solid #0d281e;
+    color: #ffffff !important;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
+}
+
+.demo-profile-pill:hover {
+    background: #2d6a4f;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(27, 67, 50, 0.28);
+}
+
+.demo-profile-pill.pill-senasa {
+    background: #d97706;
+    border-color: #b45309;
+    color: #ffffff !important;
+}
+
+.demo-profile-pill.pill-senasa:hover {
+    background: #b45309;
+    box-shadow: 0 3px 8px rgba(217, 119, 6, 0.35);
+}
+
+.demo-profile-pill.pill-exportador {
+    background: #0284c7;
+    border-color: #0369a1;
+    color: #ffffff !important;
+}
+
+.demo-profile-pill.pill-exportador:hover {
+    background: #0369a1;
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.35);
+}
+
+.demo-profile-desc {
+    color: #1e293b;
+    font-size: 0.83rem;
+}
+
+.demo-profile-desc strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.demo-profile-desc strong.highlight-senasa {
+    color: #b45309;
+    font-weight: 700;
+}
+
+.demo-profile-desc strong.highlight-exportador {
+    color: #0369a1;
+    font-weight: 700;
+}
+
+.demo-profile-desc code {
+    background: #e2e8f0;
+    color: #0f172a;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.78rem;
+}
+
+/* =========================================================================
+   Módulos de Auditoría Fitosanitaria y Cumplimiento Normativo (SENASA)
+   Módulo B: Integridad Fitosanitaria y Calidad
+   Módulo C: Trazabilidad de Origen y Cumplimiento Normativo
+   ========================================================================= */
+
+.senasa-audit-section {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    transition: var(--transition);
+}
+
+.senasa-audit-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #38bdf8;
+    margin-bottom: 4px;
+}
+
+.senasa-audit-subtitle {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    margin-bottom: 14px;
+    line-height: 1.4;
+}
+
+.senasa-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.senasa-kpi-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: var(--transition);
+}
+
+.senasa-kpi-card:hover {
+    border-color: #38bdf8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.senasa-kpi-label {
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.senasa-kpi-value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.senasa-kpi-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.senasa-kpi-unit {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.senasa-kpi-subtext {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+/* Badges Analíticos Fitosanitarios */
+.badge-analitico {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.badge-humedo-advertencia {
+    background-color: #451a03;
+    border: 1px solid #f59e0b;
+    color: #fbbf24;
+}
+
+.badge-apto-verde {
+    background-color: #064e3b;
+    border: 1px solid #10b981;
+    color: #6ee7b7;
+}
+
+.badge-peligro-rojo {
+    background-color: #450a0a;
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    animation: pulse-danger-senasa 2s infinite;
+}
+
+@keyframes pulse-danger-senasa {
+    0%, 100% { border-color: #ef4444; box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+    50% { border-color: #f87171; box-shadow: 0 0 8px rgba(239, 68, 68, 0.45); }
+}
+
+/* Módulo C: Trazabilidad y Cumplimiento Normativo */
+.senasa-normative-card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    transition: var(--transition);
+}
+
+.senasa-normative-card:hover {
+    border-color: #38bdf8;
+}
+
+.senasa-normative-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.pill-renspa-senasa {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #0f172a;
+    border: 1px solid #2d6a4f;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.badge-senasa-423 {
+    background-color: #0c4a6e;
+    border: 1px solid #0284c7;
+    color: #7dd3fc;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 6px;
+}
+
+.badge-eudr-box {
+    background: rgba(6, 78, 59, 0.4);
+    border: 1px solid #059669;
+    color: #d1fae5;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+.btn-inspeccionar-cpe {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff !important;
+    border: 1px solid #38bdf8;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+    text-decoration: none;
+    user-select: none;
+}
+
+.btn-inspeccionar-cpe:hover {
+    background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-inspeccionar-cpe:active {
+    transform: translateY(0);
+}
+
+/* Compatibilidad modo oscuro explícito (Dark Reader y prefer-color-scheme) */
+@media (prefers-color-scheme: dark) {
+    .senasa-audit-section {
+        background: #0f172a !important;
+        border-color: #334155 !important;
+    }
+    .senasa-kpi-card,
+    .senasa-normative-card {
+        background: #1e293b !important;
+        border-color: #475569 !important;
+    }
+}
+
+[data-darkreader-scheme="dark"] .senasa-audit-section,
+html[data-darkreader-mode] .senasa-audit-section,
+body[data-darkreader-mode] .senasa-audit-section {
+    background: #101923 !important;
+    border-color: #2b3b4c !important;
+}
+
+[data-darkreader-scheme="dark"] .senasa-kpi-card,
+[data-darkreader-scheme="dark"] .senasa-normative-card,
+html[data-darkreader-mode] .senasa-kpi-card,
+html[data-darkreader-mode] .senasa-normative-card,
+body[data-darkreader-mode] .senasa-kpi-card,
+body[data-darkreader-mode] .senasa-normative-card {
+    background: #18222f !important;
+    border-color: #33465b !important;
+}
+
+
+
 
