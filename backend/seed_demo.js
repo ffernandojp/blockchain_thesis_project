@@ -12,7 +12,7 @@ function seedDemoData() {
         '01.002.0.00345/00',
         'Lat: -34.6037, Lon: -58.3816',
         40.0,
-        'bafybeicarta001agrotech'
+        'QmPQHUTazDJNygp4Nym3vXKHSbTYFzGxPMJD89FMVuyKca'
     );
     fabricLedger.actualizarEstadoLogistico('LOTE-AGRO-001', 'EN_TRANSITO_ACOPIO', 'Transportista', 'Tramo 1 (Campo -> Acopio): En viaje por flete corto.');
     fabricLedger.actualizarEstadoLogistico('LOTE-AGRO-001', 'RECEPCIONADO_ACOPIO', 'Acopiador / Cooperativa', 'Pesaje: 40.0TN en balanza oficial de acopio.');
@@ -22,7 +22,7 @@ function seedDemoData() {
         '02.003.0.00789/00',
         'Lat: -33.8912, Lon: -60.5421',
         60.0,
-        'bafybeicarta002agrotech'
+        'QmTtHWtJRJgjAaMmjLspCiMDVoo3ZswgEXL4J6KDgizjCt'
     );
     fabricLedger.actualizarEstadoLogistico('LOTE-AGRO-002', 'EN_TRANSITO_ACOPIO', 'Transportista', 'Tramo 1 (Campo -> Acopio): En viaje por flete corto.');
     fabricLedger.actualizarEstadoLogistico('LOTE-AGRO-002', 'RECEPCIONADO_ACOPIO', 'Acopiador / Cooperativa', 'Pesaje: 60.0TN en balanza oficial de acopio.');
@@ -67,15 +67,15 @@ function seedDemoData() {
     // =========================================================================
     // 2. LOTE MULTINIVEL COMPLETO EXPORTADO: LOTE-BUQUE-EXPORT-200 (200 TN)
     // =========================================================================
-    fabricLedger.registrarCosechaPrimaria('LOTE-SUR-01', '04.005.0.00111/00', 'Lat: -37.2911, Lon: -59.1332', 40.0, 'bafybeicartasur01tn40');
+    fabricLedger.registrarCosechaPrimaria('LOTE-SUR-01', '04.005.0.00111/00', 'Lat: -37.2911, Lon: -59.1332', 40.0, 'QmSTKnPEGq9yhiaKTroeLEYN99iQMZE2bq4FMh1hXsSazG');
     fabricLedger.actualizarEstadoLogistico('LOTE-SUR-01', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 40.0TN.');
 
-    fabricLedger.registrarCosechaPrimaria('LOTE-SUR-02', '04.005.0.00222/00', 'Lat: -37.3456, Lon: -59.2104', 60.0, 'bafybeicartasur02tn60');
+    fabricLedger.registrarCosechaPrimaria('LOTE-SUR-02', '04.005.0.00222/00', 'Lat: -37.3456, Lon: -59.2104', 60.0, 'QmYVm5X1sMFtLLt3ncbRqKBgeHoREs8SSWPTDQ5DGefjQ2');
     fabricLedger.actualizarEstadoLogistico('LOTE-SUR-02', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 60.0TN.');
 
     fabricLedger.procesarAcopioYMezcla('SILO-TANDIL-100', ['LOTE-SUR-01', 'LOTE-SUR-02']);
 
-    fabricLedger.registrarCosechaPrimaria('LOTE-NORTE-03', '04.006.0.00333/00', 'Lat: -33.6789, Lon: -60.1234', 100.0, 'bafybeicartanorte03tn100');
+    fabricLedger.registrarCosechaPrimaria('LOTE-NORTE-03', '04.006.0.00333/00', 'Lat: -33.6789, Lon: -60.1234', 100.0, 'QmVEateVCDgPqqUn65UKVNou7qQi2rjbqBXHEk1P3k74es');
     fabricLedger.actualizarEstadoLogistico('LOTE-NORTE-03', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 100.0TN.');
 
     fabricLedger.procesarAcopioYMezcla('LOTE-BUQUE-EXPORT-200', ['SILO-TANDIL-100', 'LOTE-NORTE-03']);
@@ -119,7 +119,7 @@ function seedDemoData() {
         '01.002.0.00345/00',
         'Lat: -34.6037, Lon: -58.3816',
         30.0,
-        'bafybeicampoprimario30tn'
+        'QmcsUT11xS3btsGXhY5iuN1EzYMTc399CVp4deh5ewrvPF'
     );
     cosecha1.owner = 'productor1';
 
@@ -129,7 +129,7 @@ function seedDemoData() {
         '01.002.0.00345/00',
         'Lat: -34.7891, Lon: -58.5432',
         29.5,
-        'bafybeicamion01transito'
+        'QmQMuQDCxoTmbiNHNDJHFPbbrtzu53gHf3xucA54U2Ph58'
     );
     fabricLedger.actualizarEstadoLogistico('CAMION-TRANSITO-01', 'EN_TRANSITO_ACOPIO', 'Transportista', 'Tramo 1 (Campo -> Acopio): En viaje hacia Planta de Acopio con CPE Primaria.');
 
@@ -139,24 +139,27 @@ function seedDemoData() {
         '01.002.0.00034/00',
         'Lat: -34.4512, Lon: -60.1234',
         32.0,
-        'bafybeibalanza02descargado'
+        'QmQRqax5sPgKQk5r2DgGMLAXFcWbhqbawdv1wMVQ2h4bYW'
     );
     fabricLedger.actualizarEstadoLogistico('CAMION-BALANZA-02', 'EN_TRANSITO_ACOPIO', 'Transportista', 'En viaje.');
     fabricLedger.actualizarEstadoLogistico('CAMION-BALANZA-02', 'RECEPCIONADO_ACOPIO', 'Acopiador / Cooperativa', 'Recepción y pesaje neto definitivo: 31.85 TN en balanza acopio.');
 
-    // Etapa 4: ACOPIADO_ACONDICIONADO (Granos mezclados/acondicionados en silo, listos para SENASA)
-    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-A', '01.002.0.00034/00', 'Lat: -34.45, Lon: -60.12', 45.0, 'cid_pre_a');
-    fabricLedger.actualizarEstadoLogistico('LOTE-PRE-A', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 45 TN.');
-    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-B', '01.002.0.00034/01', 'Lat: -34.50, Lon: -60.20', 35.0, 'cid_pre_b');
-    fabricLedger.actualizarEstadoLogistico('LOTE-PRE-B', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 35 TN.');
+    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-A', '01.002.0.00034/00', 'Lat: -34.4500, Lon: -60.1200', 45.0, 'QmNh2VZ6hC2hsRG85bcnEHGmHCQ73oWXUFLqayDq6R8hVv');
+    fabricLedger.actualizarEstadoLogistico('LOTE-PRE-A', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 45 TN. Calidad calador: Humedad 15.2% - Grado 2.');
+    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-B', '01.002.0.00034/01', 'Lat: -34.5000, Lon: -60.2000', 35.0, 'QmQmVyT6AUNEpoTx9PXk2KJ3UmfNLwmnic1LPhgmZiTeVk');
+    fabricLedger.actualizarEstadoLogistico('LOTE-PRE-B', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 35 TN. Calidad calador: Humedad 15.0% - Grado 2.');
 
-    fabricLedger.procesarAcopioYMezcla('SILO-ACONDICIONADO-03', ['LOTE-PRE-A', 'LOTE-PRE-B']);
-    // Estado: ACOPIADO_ACONDICIONADO (Listo para SENASA)
+    const silo03 = fabricLedger.procesarAcopioYMezcla('SILO-ACONDICIONADO-03', ['LOTE-PRE-A', 'LOTE-PRE-B']);
+    silo03.humedadIngreso = 15.2; // % registrado al arribo del camión desde chacra (> 14.5% requirió secado)
+    silo03.humedadFinal = 13.8;   // % parámetro actual en silo (<= 14.5% apto exportación)
+    silo03.materiaExtrana = 'Impurezas <= 1.0% | Granos Dañados <= 3.0%';
+    silo03.gradoComercial = 'Grado 2 Oficial';
+    // Estado: ACOPIADO_ACONDICIONADO (Listo para auditoría y fiscalización de SENASA)
 
     // Etapa 5: VALIDADO_SENASA (SENASA certificó parámetros y selló BFA, listo para CPE de Traslado)
-    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-C', '02.003.0.00789/00', 'Lat: -33.89, Lon: -60.54', 50.0, 'cid_pre_c');
+    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-C', '02.003.0.00789/00', 'Lat: -33.89, Lon: -60.54', 50.0, 'QmQX4LcWohgA9pKXpScMCyGfNFSKSB7WsezYNeXvoPNgBY');
     fabricLedger.actualizarEstadoLogistico('LOTE-PRE-C', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 50 TN.');
-    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-D', '02.003.0.00789/00', 'Lat: -33.92, Lon: -60.50', 50.0, 'cid_pre_d');
+    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-D', '02.003.0.00789/00', 'Lat: -33.92, Lon: -60.50', 50.0, 'QmTqQJJnytZasXNJiEpzBz6oR7bw4pghYqFQ5thN4esGjd');
     fabricLedger.actualizarEstadoLogistico('LOTE-PRE-D', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 50 TN.');
 
     fabricLedger.procesarAcopioYMezcla('SILO-VALIDADO-04', ['LOTE-PRE-C', 'LOTE-PRE-D']);
@@ -169,7 +172,7 @@ function seedDemoData() {
     // Estado: VALIDADO_SENASA (Listo para emitir CPE de Traslado hacia Bahía Blanca o Quequén)
 
     // Etapa 6: EN_TRANSITO_PUERTO (CPE de Traslado emitida con destino específico, camión en ruta a puerto)
-    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-E', '05.006.0.00555/00', 'Lat: -35.12, Lon: -59.43', 70.0, 'cid_pre_e');
+    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-E', '05.006.0.00555/00', 'Lat: -35.12, Lon: -59.43', 70.0, 'QmbKsCpqxADh7QFB6wecSqqhH3orzCdJzEHv1UxXAt749V');
     fabricLedger.actualizarEstadoLogistico('LOTE-PRE-E', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 70 TN.');
     fabricLedger.acondicionarLote('LOTE-PRE-E', { calidadComercial: 'Grado 2' });
     fabricLedger.notarizarSenasa(
@@ -191,7 +194,7 @@ function seedDemoData() {
     });
 
     // Etapa 7: ARRIBADO_PUERTO (Arribo confirmado, las 3 condiciones de HABILITADO PARA EMBARQUE cumplidas)
-    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-F', '04.005.0.00111/00', 'Lat: -37.29, Lon: -59.13', 80.0, 'cid_pre_f');
+    fabricLedger.registrarCosechaPrimaria('LOTE-PRE-F', '04.005.0.00111/00', 'Lat: -37.29, Lon: -59.13', 80.0, 'QmXGkdhf3F1RUgFwAAXGeyViUU7swDEAh5vgDq7GwocSYV');
     fabricLedger.actualizarEstadoLogistico('LOTE-PRE-F', 'RECEPCIONADO_ACOPIO', 'Acopiador', 'Pesaje: 80 TN.');
     fabricLedger.acondicionarLote('LOTE-PRE-F', { calidadComercial: 'Grado 1' });
     fabricLedger.notarizarSenasa(

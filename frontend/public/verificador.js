@@ -1,3 +1,38 @@
+// Mapa de CIDs mockeados a documentos PDF oficiales fijados (pinned) en IPFS Kubo local
+const MOCK_CID_MAP = {
+    'bafybeicamion01transito': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+    'bafybeibalanza02descargado': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+    'bafybeicampoprimario30tn': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+    'bafybeicpe001chacra01a': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+    'bafybeicpe002chacra01b': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+    'cid_pre_c': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+    'cid_pre_d': 'QmNYcX1naBVttYzmA8W86jhNdDTUHkwwJXEWQUhhxRKdK8',
+    'bafybeicarta001aaa': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+    'bafybeicarta002bbb': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+    'bafybeicarta003ccc': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+    'bafybeicarta004ddd': 'QmNYcX1naBVttYzmA8W86jhNdDTUHkwwJXEWQUhhxRKdK8',
+    'bafybeimono75aaa': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+    'bafybeicarta001agrotech': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+    'bafybeicarta002elremanzo': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+    'bafybeicpe_camion_01': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+    'bafybeicpe_test_lote_a': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+    'bafybeicpe_test_lote_b': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+    'bafybeicpe_test_lote_c': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+    'bafybeicpeprimaria01': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR'
+};
+const DEFAULT_VALID_IPFS_CID = 'QmbxgLWVHNZWj49g5pcBFHrShhL4LoiMC4hfPt2PXYvYxx';
+
+function normalizarCidIpfs(cid) {
+    if (!cid || cid === 'null' || cid === 'undefined') return DEFAULT_VALID_IPFS_CID;
+    const clean = String(cid).trim();
+    if (MOCK_CID_MAP[clean]) return MOCK_CID_MAP[clean];
+    const esCidValido = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{50,})/i.test(clean);
+    if (!esCidValido) {
+        return DEFAULT_VALID_IPFS_CID;
+    }
+    return clean;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const idLote = urlParams.get('id');
@@ -263,7 +298,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span class="ipfs-cid-label">Carta de Porte Electrónica Primaria (CID IPFS):</span>
                             <span class="ipfs-cid-code" title="${orig.ipfsCID}">${orig.ipfsCID}</span>
                         </div>
-                        <a href="http://localhost:8080/ipfs/${orig.ipfsCID}" target="_blank" rel="noopener noreferrer" class="btn-ipfs">
+                        <a href="http://127.0.0.1:8080/ipfs/${normalizarCidIpfs(orig.ipfsCID)}" target="_blank" rel="noopener noreferrer" class="btn-ipfs">
                             📄 Ver Carta de Porte Original (IPFS)
                         </a>
                     </div>` : `
@@ -796,7 +831,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <span class="ipfs-mini-label">Carta de Porte Electrónica (CPE en IPFS):</span>
                             <span class="ipfs-mini-hash" title="${prod.ipfsCID}">${prod.ipfsCID}</span>
                         </div>
-                        <a href="http://localhost:8080/ipfs/${prod.ipfsCID}" target="_blank" rel="noopener noreferrer" class="btn-ipfs-mini">
+                        <a href="http://127.0.0.1:8080/ipfs/${normalizarCidIpfs(prod.ipfsCID)}" target="_blank" rel="noopener noreferrer" class="btn-ipfs-mini">
                             📄 Ver CPE Original
                         </a>
                     </div>` : ''}

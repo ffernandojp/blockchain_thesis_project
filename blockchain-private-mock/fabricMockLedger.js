@@ -69,6 +69,17 @@ class FabricMockLedger {
       bfaHash: null,    // Hash notarial en BFA (Blockchain Federal Argentina)
       fechaCosecha: fechaRegistro,
       lotesOrigen: [],
+      humedadIngreso: 15.2, // % registrado al arribo en balanza desde chacra (> 14.5% requiere secado)
+      humedadFinal: 13.8,   // % una vez acondicionado en silo (<= 14.5% apto exportación)
+      materiaExtrana: 'Impurezas <= 1.0% | Granos Dañados <= 3.0%',
+      gradoComercial: 'Grado 2 Oficial',
+      calidad: 'Humedad 15.2% - Grado 2',
+      calidadParams: {
+        secado: 'Conforme (<14.0% humedad)',
+        zarandeo: 'Completado (Zaranda oficial)',
+        fumigacion: 'Aplicada (Fosfuro de aluminio)',
+        calidadComercial: 'Grado 2 Oficial'
+      },
       historialTransacciones: [{
         accion: 'REGISTRO_INICIAL',
         fecha: fechaRegistro,
@@ -151,6 +162,10 @@ class FabricMockLedger {
       geolocalizacion: 'Silo_Bahia_Blanca',
       volumenToneladas: volumenConsolidado,
       estado: 'ACOPIADO_ACONDICIONADO', // Homogeneizado y acondicionado en silo, disponible para fiscalización SENASA
+      humedadIngreso: 15.1, // Promedio ponderado al arribo de precursores
+      humedadFinal: 13.6,   // Parámetro comercial y sanitario actual en silo
+      materiaExtrana: 'Impurezas <= 1.0% | Granos Dañados <= 3.0%',
+      gradoComercial: 'Grado 2 Homogéneo',
       calidadParams: {
         secado: 'Conforme (<14.0% humedad)',
         zarandeo: 'Completado (Zaranda oficial)',
@@ -392,11 +407,15 @@ class FabricMockLedger {
 
     const ahora = new Date().toISOString();
     lote.estado = 'ACOPIADO_ACONDICIONADO';
+    lote.humedadIngreso = lote.humedadIngreso || 15.2;
+    lote.humedadFinal = calidadParams.humedadFinal ? parseFloat(calidadParams.humedadFinal) : 13.8;
+    lote.materiaExtrana = calidadParams.materiaExtrana || 'Impurezas <= 1.0% | Granos Dañados <= 3.0%';
+    lote.gradoComercial = calidadParams.calidadComercial || 'Grado 2 Oficial';
     lote.calidadParams = {
-      secado: calidadParams.secado || 'Conforme (<14.0% humedad)',
+      secado: calidadParams.secado || `Conforme (${lote.humedadFinal}% humedad)`,
       zarandeo: calidadParams.zarandeo || 'Completado (Zaranda oficial)',
       fumigacion: calidadParams.fumigacion || 'Aplicada (Fosfuro de aluminio)',
-      calidadComercial: calidadParams.calidadComercial || 'Grado 2 Oficial',
+      calidadComercial: lote.gradoComercial,
       fechaAcondicionamiento: ahora
     };
 
@@ -435,9 +454,14 @@ class FabricMockLedger {
     lote.certificacionSenasa = {
       inspector: datosInspeccion.inspector || 'Inspector SENASA / ARCA',
       plagasCuarentenarias: datosInspeccion.plagasCuarentenarias || 'Ausencia de plagas cuarentenarias certificada',
-      calidadTipificada: datosInspeccion.calidadTipificada || 'Grado 2 Homogéneo Conforme',
+      calidadTipificada: datosInspeccion.calidadTipificada || lote.gradoComercial || 'Grado 2 Homogéneo Conforme',
       conformidadFitosanitaria: true,
       bfaHash: bfaHash,
+      humedadIngreso: datosInspeccion.humedadIngreso !== undefined ? parseFloat(datosInspeccion.humedadIngreso) : (lote.humedadIngreso || 15.2),
+      humedadFinal: datosInspeccion.humedadFinal !== undefined ? parseFloat(datosInspeccion.humedadFinal) : (lote.humedadFinal || 13.8),
+      gradoComercial: datosInspeccion.calidadTipificada || lote.gradoComercial || 'Grado 2 Oficial',
+      materiaExtrana: datosInspeccion.materiaExtrana || lote.materiaExtrana || 'Impurezas <= 1.0%',
+      conformidadEUDR: true,
       fechaCertificacion: ahora
     };
     lote.inspeccionSenasa = lote.certificacionSenasa;

@@ -5,10 +5,19 @@ window.showToast = function (message, type = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
 
+    let icon = '✅';
+    if (type === 'warning') {
+        icon = '⚠️';
+    } else if (type === 'error') {
+        icon = '❌';
+    } else if (type === 'info') {
+        icon = '✅'; // Tick de acierto para indicar perfil cargado e información positiva
+    }
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.innerHTML = `
-        <span>${type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌'}</span>
+        <span>${icon}</span>
         <span>${message}</span>
     `;
     container.appendChild(toast);
@@ -173,7 +182,7 @@ window.seleccionarPerfilDemo = function (username, password) {
         userInp.value = username;
         passInp.value = password;
         userInp.focus();
-        showToast(`Perfil cargado: ${username}`, 'info');
+        showToast(`Perfil cargado: ${username}`, 'success');
     }
 };
 
@@ -256,9 +265,11 @@ window.renderizarSelectorRenspa = function (user) {
         `).join('');
 
         contenedor.innerHTML = `
-            <select id="renspa" name="renspa" class="form-select" required>
-                ${optionsHtml}
-            </select>
+            <div class="select-wrapper">
+                <select id="renspa" name="renspa" class="form-select" required>
+                    ${optionsHtml}
+                </select>
+            </div>
         `;
         if (ayudaDiv) {
             ayudaDiv.style.display = 'block';
@@ -304,6 +315,43 @@ window.renderizarSelectorRenspa = function (user) {
     }
 };
 
+// Limpieza integral de formularios y archivos adjuntos residuales
+window.limpiarFormularios = function () {
+    const registroForm = document.getElementById('registro-form');
+    if (registroForm) {
+        registroForm.reset();
+    }
+
+    const docInput = document.getElementById('documento');
+    if (docInput) {
+        docInput.value = '';
+    }
+    const previewCard = document.getElementById('documento-preview-card');
+    if (previewCard) {
+        previewCard.style.display = 'none';
+    }
+
+    const volumenInput = document.getElementById('volumen');
+    if (volumenInput) {
+        volumenInput.value = '';
+    }
+
+    const idLoteInput = document.getElementById('idLote');
+    if (idLoteInput) {
+        idLoteInput.value = '';
+    }
+
+    const otherForms = ['transporte-form', 'acopio-form', 'mezcla-form', 'cpe-traslado-form', 'exportar-form'];
+    otherForms.forEach(id => {
+        const f = document.getElementById(id);
+        if (f) f.reset();
+    });
+
+    if (typeof window.actualizarHashLotePreviewGlobal === 'function') {
+        window.actualizarHashLotePreviewGlobal();
+    }
+};
+
 window.evaluarPantalla = function () {
     // Obtenemos los paneles dinámicamente para evitar problemas de timing
     const loginPanel = document.getElementById('login-panel');
@@ -327,6 +375,7 @@ window.evaluarPantalla = function () {
     const role = localStorage.getItem('agtech_role');
 
     if (!token) {
+        window.limpiarFormularios();
         if (loginPanel) loginPanel.style.display = 'block';
         if (userInfoPanel) userInfoPanel.style.display = 'none';
         if (currentUserInfo) currentUserInfo.style.display = 'none';
@@ -463,16 +512,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const json = await res.json();
                 const tbody = document.querySelector('#tabla-lotes-productor tbody');
                 if (tbody && json.success) {
-                    tbody.innerHTML = json.data.map(l => `
-                        <tr>
-                            <td>${l.id}</td>
-                            <td>${l.volumenToneladas} TN</td>
-                            <td><span class="badge" style="background:#2d6a4f;color:white;padding:4px 8px;border-radius:4px;">${l.estado}</span></td>
-                            <td>
-                                <button type="button" class="btn-primary" style="padding: 4px 8px; font-size: 0.8em;" onclick="window.open('${window.location.origin}${basePath}/verificador?id=${l.id}', '_blank')">Ver Traza / QR</button>
-                            </td>
-                        </tr>
-                    `).join('');
+                    if (!json.data || json.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 20px; font-style: italic;">No hay lotes registrados aún. Declare su primera cosecha en el formulario superior.</td></tr>';
+                    } else {
+                        tbody.innerHTML = json.data.map(l => `
+                            <tr>
+                                <td>${l.id}</td>
+                                <td>${l.volumenToneladas} TN</td>
+                                <td><span class="badge" style="background:#2d6a4f;color:white;padding:4px 8px;border-radius:4px;">${l.estado}</span></td>
+                                <td>
+                                    <button type="button" class="btn-primary" style="padding: 4px 8px; font-size: 0.8em;" onclick="window.open('${window.location.origin}${basePath}/verificador?id=${l.id}', '_blank')">Ver Traza / QR</button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
                 }
             } else if (role === 'Transportista') {
                 const containerT1 = document.getElementById('listaLotesTransporte');
@@ -507,6 +560,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     cards.forEach(c => c.classList.remove('selected'));
                                     card.classList.add('selected');
                                     if (hiddenInput) hiddenInput.value = card.dataset.id;
+                                    const msgBox = document.getElementById('transporte-confirmacion-msg');
+                                    if (msgBox) msgBox.style.display = 'none';
                                 });
                             });
                         }
@@ -793,9 +848,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                     cards.forEach(c => c.style.borderColor = '#2d6a4f');
                                     card.style.borderColor = '#38bdf8';
                                     const idSel = card.dataset.id;
-                                    document.getElementById('lote-seleccionado-senasa').textContent = idSel;
-                                    document.getElementById('idLoteNotarizar').value = idSel;
-                                    if (formSenasa) formSenasa.style.display = 'block';
+                                    const loteObj = lotesSenasa.find(item => item.id === idSel);
+                                    if (window.cargarAuditoriaSenasa && loteObj) {
+                                        window.cargarAuditoriaSenasa(loteObj);
+                                    } else {
+                                        document.getElementById('lote-seleccionado-senasa').textContent = idSel;
+                                        document.getElementById('idLoteNotarizar').value = idSel;
+                                        if (formSenasa) formSenasa.style.display = 'block';
+                                    }
                                 });
                             });
                         }
@@ -948,6 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (data.success) {
+                window.limpiarFormularios();
                 localStorage.setItem('agtech_token', data.token);
                 localStorage.setItem('agtech_role', data.rol);
                 const userInfo = {
@@ -985,9 +1046,57 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('agtech_token');
         localStorage.removeItem('agtech_role');
         localStorage.removeItem('agtech_user');
+        window.limpiarFormularios();
         window.evaluarPantalla();
         agregarLog(`ℹ️ Sesión cerrada.`);
     });
+
+    const btnResetApp = document.getElementById('btn-reset-app');
+    if (btnResetApp) {
+        btnResetApp.addEventListener('click', async () => {
+            const confirmado = await window.showCustomConfirm({
+                title: '¿Reiniciar Sistema a 0 Lotes?',
+                message: 'Esta acción eliminará <strong>todos los lotes del sistema</strong> (World State de Hyperledger Fabric) y vaciará la cola local de sincronización.<br><br>¿Desea volver a comenzar desde 0?',
+                type: 'warning',
+                confirmText: 'Sí, reiniciar a 0',
+                cancelText: 'Cancelar'
+            });
+
+            if (!confirmado) return;
+
+            try {
+                const res = await fetch('http://localhost:3000/api/admin/reset', { method: 'POST' });
+                const json = await res.json();
+
+                if (db) {
+                    try {
+                        const tx = db.transaction(['lotes_pendientes'], 'readwrite');
+                        const store = tx.objectStore('lotes_pendientes');
+                        store.clear();
+                    } catch (idbErr) {
+                        console.warn('No se pudo limpiar IndexedDB:', idbErr);
+                    }
+                }
+
+                window.limpiarFormularios();
+                showToast('✅ Sistema reiniciado: todos los lotes eliminados.', 'success');
+                agregarLog('🧹 [ADMIN] Todos los lotes fueron eliminados del World State. Sistema en 0.');
+
+                if (typeof window.cargarDatosPorRol === 'function') {
+                    const currentRole = localStorage.getItem('agtech_role');
+                    window.cargarDatosPorRol(currentRole);
+                }
+            } catch (err) {
+                console.error('Error al reiniciar:', err);
+                window.showCustomAlert({
+                    title: 'Error de Reinicio',
+                    message: `No se pudo conectar con el servidor: ${err.message}`,
+                    type: 'error',
+                    buttonText: 'Cerrar'
+                });
+            }
+        });
+    }
 
     // IndexedDB Setup
     let db;
@@ -1065,6 +1174,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const fileInput = document.getElementById('documento');
         const file = fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
 
+        // Actualizar tarjeta visual de previsualización del archivo
+        const previewCard = document.getElementById('documento-preview-card');
+        const previewNombre = document.getElementById('documento-nombre-preview');
+        const previewTamano = document.getElementById('documento-tamano-preview');
+        if (previewCard && previewNombre && previewTamano) {
+            if (file) {
+                previewNombre.textContent = file.name;
+                const kb = (file.size / 1024).toFixed(1);
+                previewTamano.textContent = `${kb} KB`;
+                previewCard.style.display = 'flex';
+            } else {
+                previewCard.style.display = 'none';
+                previewNombre.textContent = '';
+                previewTamano.textContent = '';
+            }
+        }
+
         const idLoteInput = document.getElementById('idLote');
         if (!idLoteInput) return;
 
@@ -1107,6 +1233,16 @@ document.addEventListener('DOMContentLoaded', () => {
         inputRenspa.addEventListener('change', actualizarHashLotePreview);
     }
     if (inputDocumento) inputDocumento.addEventListener('change', actualizarHashLotePreview);
+
+    const btnQuitarDoc = document.getElementById('btn-quitar-documento');
+    if (btnQuitarDoc) {
+        btnQuitarDoc.addEventListener('click', () => {
+            if (inputDocumento) {
+                inputDocumento.value = '';
+            }
+            actualizarHashLotePreview();
+        });
+    }
 
     // Interceptar envío de formulario
     form.addEventListener('submit', async (e) => {
@@ -1200,7 +1336,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const btn = document.getElementById('btn-transporte');
             setLoadingState(btn, true);
 
-            const idLote = document.getElementById('idLoteTransporte').value;
+            const idLoteInput = document.getElementById('idLoteTransporte');
+            const idLote = idLoteInput ? idLoteInput.value.trim() : '';
+
+            if (!idLote) {
+                showToast('Por favor, seleccione un lote cosechado para iniciar el flete.', 'warning');
+                if (window.showCustomAlert) {
+                    await window.showCustomAlert({
+                        title: 'Selección de Lote Requerida',
+                        message: 'Debe seleccionar un lote cosechado en campo de la lista para poder iniciar el flete corto.',
+                        type: 'warning',
+                        buttonText: 'Entendido'
+                    });
+                }
+                setLoadingState(btn, false);
+                return;
+            }
+
             try {
                 const res = await fetch('http://localhost:3000/api/lotes/transporte', {
                     method: 'POST',
@@ -1212,14 +1364,86 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await res.json();
                 if (result.success) {
-                    agregarLog(`<span class="success-text">✅ [TRANSPORTE] Lote ${idLote} actualizado a EN_TRANSITO.</span>`);
+                    agregarLog(`<span class="success-text">✅ [TRANSPORTE] Lote ${idLote} actualizado a EN_TRANSITO_ACOPIO.</span>`);
+
+                    // 1. Notificación Toast inmediata
+                    showToast(`🚛 ¡Viaje iniciado con éxito! Lote ${idLote} en tránsito a planta de acopio.`, 'success');
+
+                    // 2. Banner visual de confirmación dentro del formulario
+                    const msgBox = document.getElementById('transporte-confirmacion-msg');
+                    if (msgBox) {
+                        msgBox.style.display = 'block';
+                        msgBox.innerHTML = `
+                            <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid #4ade80; border-radius: 8px; padding: 14px 18px; color: #f0fdf4; display: flex; align-items: flex-start; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+                                <span style="font-size: 1.8rem; line-height: 1;">🚛</span>
+                                <div>
+                                    <strong style="color: #4ade80; font-size: 1rem; display: block; margin-bottom: 4px;">¡Viaje Iniciado Exitosamente!</strong>
+                                    <p style="margin: 0 0 6px 0; font-size: 0.88rem; line-height: 1.4; color: #e2e8f0;">
+                                        El flete corto para el lote <strong style="color: #fde047;">${idLote}</strong> ha iniciado su recorrido hacia la Planta de Acopio.
+                                    </p>
+                                    <div style="font-size: 0.8rem; color: #94a3b8;">
+                                        <span>Estado: <strong style="color:#38bdf8;">EN_TRANSITO_ACOPIO</strong></span> &bull; 
+                                        <span>Firma Digital: <strong style="color:#4ade80;">Asentada en Blockchain</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // 3. Modal AgTech de confirmación oficial
+                    if (window.showCustomAlert) {
+                        await window.showCustomAlert({
+                            title: '¡Viaje Iniciado con Éxito!',
+                            message: `
+                                <div style="text-align: left; padding: 4px 0;">
+                                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: #4ade80;">
+                                        <span style="font-size: 1.6rem;">🚛</span>
+                                        <span style="font-weight: 700; font-size: 1.05rem;">Flete Corto en Tránsito Activo</span>
+                                    </div>
+                                    <p style="margin-bottom: 10px; color: #f1f5f9; font-size: 0.95rem; line-height: 1.4;">
+                                        El traslado del lote <strong style="color: #fde047;">${idLote}</strong> desde la chacra hacia la Planta de Acopio ha comenzado correctamente.
+                                    </p>
+                                    <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 8px; padding: 12px; margin: 12px 0; font-size: 0.88rem;">
+                                        <div style="margin-bottom: 6px;"><strong>📦 Lote ID:</strong> <span style="font-family: monospace; color: #fde047;">${idLote}</span></div>
+                                        <div style="margin-bottom: 6px;"><strong>📍 Nuevo Estado:</strong> <span class="badge" style="background:#0284c7; color:white; padding:2px 8px; border-radius:4px; font-weight:600;">EN_TRANSITO_ACOPIO</span></div>
+                                        <div style="margin-bottom: 6px;"><strong>🛣️ Tramo:</strong> Tramo 1 (Campo &rarr; Acopio)</div>
+                                        <div><strong>✍️ Firma Digital:</strong> Asentada por Transportista en World State</div>
+                                    </div>
+                                    <p style="font-size: 0.82rem; color: #94a3b8; margin: 0;">
+                                        La Planta de Acopio y la Cooperativa ya pueden visualizar este flete entrante en su monitor de balanza oficial.
+                                    </p>
+                                </div>
+                            `,
+                            type: 'success',
+                            buttonText: 'Entendido'
+                        });
+                    }
+
                     window.cargarDatosIniciales('Transportista');
                 } else {
                     agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR TRANSPORTE] Lote ${idLote}: ${result.error}</span>`);
+                    showToast(`Error al iniciar flete: ${result.error}`, 'error');
+                    if (window.showCustomAlert) {
+                        await window.showCustomAlert({
+                            title: 'Error al Iniciar Flete',
+                            message: `No se pudo iniciar el flete para el lote ${idLote}:<br><br><span style="color:#f87171;">${result.error}</span>`,
+                            type: 'error',
+                            buttonText: 'Cerrar'
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Error al iniciar transporte:', error);
                 agregarLog(`<span class="error-text" style="color:#ef4444;">❌ [ERROR TRANSPORTE] Problema de red.</span>`);
+                showToast('Problema de red o conexión al iniciar flete.', 'error');
+                if (window.showCustomAlert) {
+                    await window.showCustomAlert({
+                        title: 'Error de Conexión',
+                        message: 'Ocurrió un problema de comunicación con el servidor al intentar iniciar el viaje.',
+                        type: 'error',
+                        buttonText: 'Cerrar'
+                    });
+                }
             }
             formTransporte.reset();
             setLoadingState(btn, false);
@@ -1339,13 +1563,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p style="margin-bottom: 6px;"><strong style="color: #ffffff;">RENSPA:</strong> ${l.renspa}</p>
                             <p style="margin-bottom: 6px;"><strong style="color: #ffffff;">Volumen Verificado:</strong> ${l.volumenToneladas} TN</p>
                             ${l.bfaHash ? `<p style="margin-bottom: 6px; font-size:0.8rem; color:#86efac;"><strong>Sello BFA:</strong> ${l.bfaHash.substring(0, 24)}...</p>` : '<p style="margin-bottom: 6px; font-size:0.8rem; color:#fde047;"><strong>Sello BFA:</strong> Pendiente de certificación</p>'}
-                            ${l.ipfsCID ? `<p style="margin-bottom: 8px;"><strong style="color: #ffffff;">CPE IPFS:</strong> <a href="http://127.0.0.1:8080/ipfs/${l.ipfsCID}" target="_blank" style="color:#4ade80; text-decoration: underline; font-weight: bold;">Ver Documento</a></p>` : ''}
+                            ${l.ipfsCID ? `<p style="margin-bottom: 8px;"><strong style="color: #ffffff;">CPE IPFS:</strong> <a href="http://127.0.0.1:8080/ipfs/${normalizarCidIpfs(l.ipfsCID)}" target="_blank" style="color:#4ade80; text-decoration: underline; font-weight: bold;">Ver Documento</a></p>` : ''}
                             <p style="margin-top: 10px;"><a href="${verifUrl}" target="_blank" style="display: inline-block; background: #0284c7; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: bold;">🔍 Abrir Verificador Público / Desglose de Masa ↗</a></p>
                         </div>
                     `;
-                    document.getElementById('lote-seleccionado-senasa').textContent = l.id;
-                    document.getElementById('idLoteNotarizar').value = l.id;
-                    formSenasa.style.display = 'block';
+                    if (window.cargarAuditoriaSenasa) {
+                        window.cargarAuditoriaSenasa(l);
+                    } else {
+                        document.getElementById('lote-seleccionado-senasa').textContent = l.id;
+                        document.getElementById('idLoteNotarizar').value = l.id;
+                        formSenasa.style.display = 'block';
+                    }
                 } else if (json.success && json.loteConsumido) {
                     const lc = json.loteConsumido;
                     const verifUrl = `${window.location.origin}${basePath}/verificador?id=${lc.id}`;
@@ -1379,6 +1607,205 @@ document.addEventListener('DOMContentLoaded', () => {
             setLoadingState(btnBuscarSenasa, false);
         });
     }
+
+    // Mapa de CIDs mockeados/legados a documentos PDF oficiales fijados (pinned) en IPFS Kubo local
+    const MOCK_CID_MAP = {
+        'bafybeicamion01transito': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+        'bafybeibalanza02descargado': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+        'bafybeicampoprimario30tn': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+        'bafybeicpe001chacra01a': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+        'bafybeicpe002chacra01b': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+        'cid_pre_c': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+        'cid_pre_d': 'QmNYcX1naBVttYzmA8W86jhNdDTUHkwwJXEWQUhhxRKdK8',
+        'bafybeicarta001aaa': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+        'bafybeicarta002bbb': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+        'bafybeicarta003ccc': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+        'bafybeicarta004ddd': 'QmNYcX1naBVttYzmA8W86jhNdDTUHkwwJXEWQUhhxRKdK8',
+        'bafybeimono75aaa': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+        'bafybeicarta001agrotech': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+        'bafybeicarta002elremanzo': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+        'bafybeicpe_camion_01': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+        'bafybeicpe_test_lote_a': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR',
+        'bafybeicpe_test_lote_b': 'QmYDRcJJ9cMi72Akx3SVUbohKKVbPRadfUC3onD3t5RCXo',
+        'bafybeicpe_test_lote_c': 'QmQ7wAEbG1rkhsxYjHxaLexEosRehNg4J5GFx4wXdn9jEo',
+        'bafybeicpeprimaria01': 'QmbJfZeNTox7LQjciryXRevacYmwJKAC6e3CQ7cKnRi5oR'
+    };
+    const DEFAULT_VALID_IPFS_CID = 'QmbxgLWVHNZWj49g5pcBFHrShhL4LoiMC4hfPt2PXYvYxx';
+
+    function normalizarCidIpfs(cid) {
+        if (!cid || cid === 'null' || cid === 'undefined') return DEFAULT_VALID_IPFS_CID;
+        const clean = String(cid).trim();
+        if (MOCK_CID_MAP[clean]) return MOCK_CID_MAP[clean];
+        const esCidValido = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[a-z2-7]{50,})/i.test(clean);
+        if (!esCidValido) {
+            return DEFAULT_VALID_IPFS_CID;
+        }
+        return clean;
+    }
+
+    // Apertura oficial de Carta de Porte en nodo local IPFS Kubo
+    window.abrirDocumentoIpfs = function (cid) {
+        const cidReal = normalizarCidIpfs(cid);
+        const ipfsUrl = `http://127.0.0.1:8080/ipfs/${cidReal}`;
+        window.open(ipfsUrl, '_blank');
+        showToast(`Inspeccionando Carta de Porte oficial en nodo IPFS Kubo: ${cidReal.substring(0, 15)}...`, 'info');
+    };
+
+    // Carga interactiva de auditoría de calidad y trazabilidad (Módulos B y C) para SENASA
+    window.cargarAuditoriaSenasa = function (lote) {
+        if (!lote) return;
+
+        const idLote = lote.id;
+        const loteIdSpan = document.getElementById('lote-seleccionado-senasa');
+        const idHidden = document.getElementById('idLoteNotarizar');
+        if (loteIdSpan) loteIdSpan.textContent = idLote;
+        if (idHidden) idHidden.value = idLote;
+
+        // B.1 Humedad de Ingreso en Balanza
+        const kpiHumedadIngreso = document.getElementById('kpi-humedad-ingreso');
+        const badgeHumedadIngresoContainer = document.getElementById('badge-humedad-ingreso-container');
+        const humIngresoVal = lote.humedadIngreso !== undefined ? parseFloat(lote.humedadIngreso) : (lote.calidad && lote.calidad.includes('14.2%') ? 14.2 : 15.2);
+        if (kpiHumedadIngreso) kpiHumedadIngreso.textContent = humIngresoVal.toFixed(1);
+        if (badgeHumedadIngresoContainer) {
+            if (humIngresoVal > 14.5) {
+                badgeHumedadIngresoContainer.innerHTML = `<span class="badge-analitico badge-humedo-advertencia">⚠️ Grano Húmedo / Requiere Secado</span>`;
+            } else {
+                badgeHumedadIngresoContainer.innerHTML = `<span class="badge-analitico badge-apto-verde">✅ Ingreso Estándar (&le; 14.5%)</span>`;
+            }
+        }
+
+        // B.2 Humedad Final Acondicionada
+        const kpiHumedadFinal = document.getElementById('kpi-humedad-final');
+        const inpHumedadFinal = document.getElementById('inp-humedad-final-audit');
+        const badgeHumedadFinalContainer = document.getElementById('badge-humedad-final-container');
+        const humFinalVal = lote.humedadFinal !== undefined ? parseFloat(lote.humedadFinal) : 13.8;
+
+        function actualizarBadgeHumedadFinal(val) {
+            if (kpiHumedadFinal) {
+                kpiHumedadFinal.textContent = val.toFixed(1);
+                kpiHumedadFinal.style.color = val <= 14.5 ? '#4ade80' : '#f87171';
+            }
+            if (badgeHumedadFinalContainer) {
+                if (val <= 14.5) {
+                    badgeHumedadFinalContainer.innerHTML = `<span class="badge-analitico badge-apto-verde">✅ Apto Almacenamiento / Exportación (Norma SAGPyA 1075/94)</span>`;
+                } else {
+                    badgeHumedadFinalContainer.innerHTML = `<span class="badge-analitico badge-peligro-rojo">⛔ Fuera de Estándar Sanitario / Riesgo de Fermentación y Micotoxinas</span>`;
+                }
+            }
+        }
+
+        if (inpHumedadFinal) {
+            inpHumedadFinal.value = humFinalVal.toFixed(1);
+            inpHumedadFinal.oninput = function () {
+                const v = parseFloat(inpHumedadFinal.value) || 0;
+                actualizarBadgeHumedadFinal(v);
+            };
+        }
+        actualizarBadgeHumedadFinal(humFinalVal);
+
+        // B.3 Grado Comercial y Materia Extraña
+        const kpiGrado = document.getElementById('kpi-grado-comercial');
+        const kpiMateria = document.getElementById('kpi-materia-extrana');
+        const inpCalidad = document.getElementById('senasa-calidad');
+        const gradoVal = lote.gradoComercial || (lote.calidadParams && lote.calidadParams.calidadComercial) || 'Grado 2 Oficial';
+        const materiaVal = lote.materiaExtrana || 'Impurezas <= 1.0% | Granos Dañados <= 3.0%';
+        if (kpiGrado) kpiGrado.textContent = gradoVal;
+        if (kpiMateria) kpiMateria.textContent = materiaVal;
+        if (inpCalidad) inpCalidad.value = gradoVal.includes('Conforme') ? gradoVal : `${gradoVal} Conforme`;
+
+        // B.4 Volumen Neto Acondicionado
+        const kpiVolumen = document.getElementById('kpi-volumen-neto');
+        if (kpiVolumen) kpiVolumen.textContent = lote.volumenToneladas ? parseFloat(lote.volumenToneladas).toFixed(2) : '--';
+
+        // C.1 Códigos RENSPA de origen asociados con validación Res. 423/2014
+        const contRenspas = document.getElementById('senasa-lista-renspas');
+        if (contRenspas) {
+            const renspasSet = new Set();
+            if (Array.isArray(lote.desgloseOrigenes) && lote.desgloseOrigenes.length > 0) {
+                lote.desgloseOrigenes.forEach(o => {
+                    if (o.renspa) renspasSet.add(o.renspa);
+                });
+            }
+            if (lote.renspa && lote.renspa !== 'ACOPIO_CENTRAL') {
+                renspasSet.add(lote.renspa);
+            }
+            if (renspasSet.size === 0 && lote.renspa) {
+                renspasSet.add(lote.renspa);
+            }
+
+            const regexRenspa = /^\d{2}\.\d{3}\.\d\.\d{5}\/\d{2}$/;
+            contRenspas.innerHTML = Array.from(renspasSet).map(r => {
+                const esValido = regexRenspa.test(r);
+                return `
+                    <span class="pill-renspa-senasa">
+                        <span>🌾</span>
+                        <strong style="color: #4ade80;">${r}</strong>
+                        <span style="font-size: 0.72rem; color: ${esValido ? '#86efac' : '#fca5a5'};">${esValido ? '✓ Res. 423/2014' : '⚠ No estándar'}</span>
+                    </span>
+                `;
+            }).join('');
+        }
+
+        // C.2 Coordenadas georreferenciadas de la parcela
+        const contCoords = document.getElementById('senasa-lista-coordenadas');
+        if (contCoords) {
+            const coordsList = [];
+            if (Array.isArray(lote.desgloseOrigenes) && lote.desgloseOrigenes.length > 0) {
+                lote.desgloseOrigenes.forEach(o => {
+                    if (o.geolocalizacion) {
+                        const f = typeof o.geolocalizacion === 'object' ? (o.geolocalizacion.formatted || `Lat: ${o.geolocalizacion.lat}, Lon: ${o.geolocalizacion.lng}`) : String(o.geolocalizacion);
+                        coordsList.push(`• Parcela ${o.renspa || ''}: ${f}`);
+                    }
+                });
+            } else if (lote.geolocalizacion) {
+                const f = typeof lote.geolocalizacion === 'object' ? (lote.geolocalizacion.formatted || `Lat: ${lote.geolocalizacion.lat}, Lon: ${lote.geolocalizacion.lng}`) : String(lote.geolocalizacion);
+                coordsList.push(`• Parcela Origen: ${f}`);
+            } else {
+                coordsList.push(`• Parcela Origen: Lat: -34.6037, Lon: -58.3816`);
+            }
+            contCoords.innerHTML = coordsList.map(c => `<div>${c}</div>`).join('');
+        }
+
+        // C.3 Documentación de Traslado: Botón interactivo "Inspeccionar CPE (IPFS)"
+        const cidInfo = document.getElementById('senasa-cpe-cid-info');
+        const contBotonesCpe = document.getElementById('senasa-cpe-botones-container');
+        const cidsMap = new Map();
+        if (lote.ipfsCID) {
+            cidsMap.set(normalizarCidIpfs(lote.ipfsCID), lote.renspa || 'CPE Primaria');
+        }
+        if (Array.isArray(lote.desgloseOrigenes)) {
+            lote.desgloseOrigenes.forEach(o => {
+                if (o.ipfsCID) cidsMap.set(normalizarCidIpfs(o.ipfsCID), o.renspa || 'CPE Origen');
+            });
+        }
+
+        if (cidsMap.size > 0) {
+            const primerCid = Array.from(cidsMap.keys())[0];
+            if (cidInfo) {
+                cidInfo.innerHTML = `Hash CID: <strong>${primerCid}</strong> ${cidsMap.size > 1 ? `(+${cidsMap.size - 1} precursores)` : ''}`;
+            }
+            if (contBotonesCpe) {
+                contBotonesCpe.innerHTML = Array.from(cidsMap.entries()).map(([cid, desc]) => `
+                    <button type="button" class="btn-inspeccionar-cpe" onclick="window.abrirDocumentoIpfs('${cid}')" style="margin-bottom: 4px;">
+                        <span>📄 Inspeccionar CPE (${desc}) [IPFS]</span>
+                    </button>
+                `).join('');
+            }
+        } else {
+            const fallbackCid = DEFAULT_VALID_IPFS_CID;
+            if (cidInfo) cidInfo.innerHTML = `Hash CID: <strong>${fallbackCid}</strong> (CPE Oficial Pinned)`;
+            if (contBotonesCpe) {
+                contBotonesCpe.innerHTML = `
+                    <button type="button" class="btn-inspeccionar-cpe" onclick="window.abrirDocumentoIpfs('${fallbackCid}')">
+                        <span>📄 Inspeccionar CPE (IPFS)</span>
+                    </button>
+                `;
+            }
+        }
+
+        const formSenasa = document.getElementById('notarizar-form');
+        if (formSenasa) formSenasa.style.display = 'block';
+    };
 
     // Modal Bloqueo Fitosanitario (SENASA / ARCA)
     window.abrirModalBloqueo = function () {
@@ -1618,6 +2045,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const chkPlagas = document.getElementById('chk-plagas');
             const senasaCalidad = document.getElementById('senasa-calidad');
             const senasaInspector = document.getElementById('senasa-inspector');
+            const inpHumedadFinal = document.getElementById('inp-humedad-final-audit');
+            const humedadFinalAuditada = inpHumedadFinal ? parseFloat(inpHumedadFinal.value) : 13.8;
+
+            // Auditoría Fitosanitaria de Humedad (CRÍTICO)
+            if (humedadFinalAuditada > 14.5) {
+                showToast('Rechazo Regulatorio: La humedad final supera el 14.5%. Riesgo de fermentación y micotoxinas. Proceda al Bloqueo Fitosanitario Preventivo.', 'error');
+                agregarLog(`<span class="error-text" style="color:#ef4444;">⛔ [SENASA RECHAZO] Lote ${idLote}: Humedad final ${humedadFinalAuditada}% supera estándar sanitario de 14.5% (Norma SAGPyA 1075/94). Riesgo fitosanitario de micotoxinas. Emisión de Sello BFA denegada. Se requiere Bloqueo Fitosanitario Preventivo o resecado en silo.</span>`);
+                setLoadingState(btn, false);
+                return;
+            }
 
             if (chkPlagas && !chkPlagas.checked) {
                 showToast('No se puede emitir el Certificado con presencia de plagas. Proceda al Bloqueo Fitosanitario.', 'error');
@@ -1626,12 +2063,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const kpiHumedadIngresoEl = document.getElementById('kpi-humedad-ingreso');
+            const kpiMateriaEl = document.getElementById('kpi-materia-extrana');
+
             const datosInspeccion = {
                 plagasLibre: true,
                 plagasCuarentenarias: 'Ausencia certificada de plagas cuarentenarias',
                 calidad: senasaCalidad ? senasaCalidad.value.trim() : 'Grado 2 Homogéneo Conforme',
                 calidadTipificada: senasaCalidad ? senasaCalidad.value.trim() : 'Grado 2 Homogéneo Conforme',
-                inspector: senasaInspector ? senasaInspector.value.trim() : 'Inspector SENASA / ARCA'
+                inspector: senasaInspector ? senasaInspector.value.trim() : 'Inspector SENASA / ARCA',
+                humedadIngreso: kpiHumedadIngresoEl ? parseFloat(kpiHumedadIngresoEl.textContent) : 15.2,
+                humedadFinal: humedadFinalAuditada,
+                materiaExtrana: kpiMateriaEl ? kpiMateriaEl.textContent : 'Impurezas <= 1.0%',
+                conformidadEUDR: true
             };
 
             try {

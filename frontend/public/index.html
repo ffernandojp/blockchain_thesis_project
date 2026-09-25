@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title>AgTech Portal Privado - Trazabilidad Maíz</title>
     <link rel="stylesheet" href="./css/portal.css">
     <!-- Leaflet para Mapas en Tiempo Real -->
@@ -43,6 +44,12 @@
 
             <div style="flex: 1;"></div>
 
+            <div style="padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.08);">
+                <button id="btn-reset-app" class="btn-danger" style="width: 100%; padding: 8px 10px; font-size: 0.78rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;" title="Eliminar todos los lotes y reiniciar desde 0">
+                    🗑️ Reiniciar Datos (0 Lotes)
+                </button>
+            </div>
+
             <div class="sidebar-footer" style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">
                 <p>Plataforma basada en Blockchain</p>
                 <p>Offline-First Enabled</p>
@@ -76,34 +83,34 @@
                     </form>
 
                     <div class="demo-profiles-container">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                            <strong style="color: #4ade80; display: block;">Perfiles de Demostración para Pruebas:</strong>
-                            <span style="font-size: 0.72rem; color: #94a3b8;">(Click para autocompletar)</span>
+                        <div class="demo-profiles-header">
+                            <strong class="demo-profiles-title">Perfiles de Demostración para Pruebas:</strong>
+                            <span class="demo-profiles-subtitle">(Click para autocompletar)</span>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div class="demo-profiles-list">
                             <div class="demo-profile-item">
                                 <span class="demo-profile-pill" onclick="window.seleccionarPerfilDemo('productor1', '123')">productor1</span>
-                                <div class="demo-profile-desc"><em>Caso 1 (Mono-establecimiento)</em> - RENSPA fijo (pass: <code>123</code>).</div>
+                                <div class="demo-profile-desc"><strong>Caso 1 (Mono-establecimiento)</strong> - RENSPA fijo (pass: <code>123</code>).</div>
                             </div>
                             <div class="demo-profile-item">
                                 <span class="demo-profile-pill" onclick="window.seleccionarPerfilDemo('productor2', '123')">productor2</span>
-                                <div class="demo-profile-desc"><em>Caso 2 (Multi-establecimiento 1:N)</em> - Desplegable campos (pass: <code>123</code>).</div>
+                                <div class="demo-profile-desc"><strong>Caso 2 (Multi-establecimiento 1:N)</strong> - Desplegable campos (pass: <code>123</code>).</div>
                             </div>
                             <div class="demo-profile-item">
                                 <span class="demo-profile-pill" onclick="window.seleccionarPerfilDemo('acopio_coop', '123')">acopio_coop</span>
-                                <div class="demo-profile-desc">Acopiador / Cooperativa - Consolidación de silos (pass: <code>123</code>).</div>
+                                <div class="demo-profile-desc"><strong>Acopiador / Cooperativa</strong> - Consolidación de silos (pass: <code>123</code>).</div>
                             </div>
                             <div class="demo-profile-item">
                                 <span class="demo-profile-pill" onclick="window.seleccionarPerfilDemo('transporte_log', '123')">transporte_log</span>
-                                <div class="demo-profile-desc">Transportista - Emisión CPE traslado intermedio (pass: <code>123</code>).</div>
+                                <div class="demo-profile-desc"><strong>Transportista</strong> - Emisión CPE traslado intermedio (pass: <code>123</code>).</div>
                             </div>
                             <div class="demo-profile-item">
-                                <span class="demo-profile-pill" onclick="window.seleccionarPerfilDemo('senasa_fiscal', '123')">senasa_fiscal</span>
-                                <div class="demo-profile-desc">Organismo de Control - Sellos BFA y bloqueo fitosanitario (pass: <code>123</code>).</div>
+                                <span class="demo-profile-pill pill-senasa" onclick="window.seleccionarPerfilDemo('senasa_fiscal', '123')">senasa_fiscal</span>
+                                <div class="demo-profile-desc"><strong class="highlight-senasa">Organismo de Control</strong> - Sellos BFA y bloqueo fitosanitario (pass: <code>123</code>).</div>
                             </div>
                             <div class="demo-profile-item">
-                                <span class="demo-profile-pill" onclick="window.seleccionarPerfilDemo('exportador_bb', '123')" style="border-color: #38bdf8; color: #38bdf8;">exportador_bb</span>
-                                <div class="demo-profile-desc"><strong style="color: #38bdf8;">Exportador (Puertos)</strong> - Confirmación de arribo y tokenización NFT (pass: <code>123</code>).</div>
+                                <span class="demo-profile-pill pill-exportador" onclick="window.seleccionarPerfilDemo('exportador_bb', '123')">exportador_bb</span>
+                                <div class="demo-profile-desc"><strong class="highlight-exportador">Exportador (Puertos)</strong> - Confirmación de arribo y tokenización NFT (pass: <code>123</code>).</div>
                             </div>
                         </div>
                     </div>
@@ -131,6 +138,14 @@
                     <div class="form-group">
                         <label>Carta de Porte (PDF)</label>
                         <input type="file" id="documento" accept="application/pdf">
+                        <div id="documento-preview-card" class="file-preview-card" style="display: none;">
+                            <div class="file-preview-info">
+                                <span class="file-preview-icon">📄</span>
+                                <span id="documento-nombre-preview" class="file-preview-name"></span>
+                                <span id="documento-tamano-preview" class="file-preview-size"></span>
+                            </div>
+                            <button type="button" id="btn-quitar-documento" class="file-preview-remove" title="Quitar archivo">✕</button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>ID Lote Autogenerado (Hash SHA-256)</label>
@@ -202,6 +217,7 @@
                         <button type="submit" class="btn-primary" id="btn-transporte"
                             style="background-color: #fca311; color: #081c15;">Iniciar Flete Corto (Firma Digital
                             Transportista)</button>
+                        <div id="transporte-confirmacion-msg" style="display: none; margin-top: 15px;"></div>
                     </form>
                 </div>
 
@@ -314,11 +330,12 @@
                         <div style="display: flex; gap: 12px; margin-bottom: 12px;">
                             <div class="form-group" style="flex: 1;">
                                 <label>Destino Portuario Específico</label>
-                                <select id="destinoPuertoSelect" required
-                                    style="width: 100%; padding: 10px; border-radius: 6px; background: #132a13; color: white; border: 1px solid #2d6a4f;">
-                                    <option value="Puerto de Bahía Blanca">Puerto de Bahía Blanca</option>
-                                    <option value="Puerto de Quequén">Puerto de Quequén</option>
-                                </select>
+                                <div class="select-wrapper">
+                                    <select id="destinoPuertoSelect" class="form-select" required>
+                                        <option value="Puerto de Bahía Blanca">Puerto de Bahía Blanca</option>
+                                        <option value="Puerto de Quequén">Puerto de Quequén</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group" style="flex: 1;">
                                 <label>Número Nueva CPE de Traslado</label>
@@ -366,15 +383,163 @@
                 </div>
 
                 <form id="notarizar-form"
-                    style="display: none; padding: 18px; border: 1px solid #2d6a4f; border-radius: 8px; margin-bottom: 15px; background: rgba(19, 42, 19, 0.7);">
-                    <h4 style="margin-bottom: 12px; color: #4ade80;">Fiscalización Oficial sobre Lote: <span
-                            id="lote-seleccionado-senasa" style="color: #ffffff;"></span></h4>
+                    style="display: none; padding: 20px; border: 1px solid #0284c7; border-radius: 10px; margin-bottom: 18px; background: rgba(15, 23, 42, 0.75);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                        <h3 style="color: #38bdf8; margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                            <span>🏛️ Consola de Fiscalización SENASA</span>
+                            <span style="font-size: 0.85rem; color: #cbd5e1;">&rarr; Lote: <code id="lote-seleccionado-senasa" style="color: #4ade80; font-size: 0.95rem;"></code></span>
+                        </h3>
+                        <span class="badge" style="background: #0284c7; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">Auditoría Sanitaria Previa a Sello BFA</span>
+                    </div>
                     <input type="hidden" id="idLoteNotarizar">
 
+                    <!-- B. Módulo de Integridad Fitosanitaria y Calidad (CRÍTICO) -->
+                    <div class="senasa-audit-section" id="senasa-modulo-calidad">
+                        <div class="senasa-audit-title">
+                            <span>🔬 B. Módulo de Integridad Fitosanitaria y Calidad (CRÍTICO)</span>
+                        </div>
+                        <p class="senasa-audit-subtitle">
+                            El inspector debe auditar visualmente los siguientes indicadores analíticos antes de emitir dictamen regulatorio:
+                        </p>
+
+                        <div class="senasa-kpi-grid">
+                            <!-- 1. Humedad de Ingreso en Balanza -->
+                            <div class="senasa-kpi-card">
+                                <div class="senasa-kpi-label">Humedad de Ingreso en Balanza</div>
+                                <div class="senasa-kpi-value-row">
+                                    <span class="senasa-kpi-value" id="kpi-humedad-ingreso">15.2</span>
+                                    <span class="senasa-kpi-unit">%</span>
+                                </div>
+                                <div class="senasa-kpi-subtext">% registrado al arribo del camión desde la chacra</div>
+                                <div id="badge-humedad-ingreso-container">
+                                    <span class="badge-analitico badge-humedo-advertencia">⚠️ Grano Húmedo / Requiere Secado</span>
+                                </div>
+                            </div>
+
+                            <!-- 2. Humedad Final Acondicionada -->
+                            <div class="senasa-kpi-card" style="border-color: #38bdf8;">
+                                <div class="senasa-kpi-label" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Humedad Final Acondicionada</span>
+                                    <span style="font-size: 0.72rem; color: #38bdf8; font-weight: 700;">Silo Activo</span>
+                                </div>
+                                <div class="senasa-kpi-value-row">
+                                    <span class="senasa-kpi-value" id="kpi-humedad-final" style="color: #4ade80;">13.8</span>
+                                    <span class="senasa-kpi-unit">%</span>
+                                </div>
+                                <div class="senasa-kpi-subtext">Parámetro comercial y sanitario actual del lote en silo</div>
+                                <div id="badge-humedad-final-container">
+                                    <span class="badge-analitico badge-apto-verde">✅ Apto Almacenamiento / Exportación (Norma SAGPyA 1075/94)</span>
+                                </div>
+                                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: space-between;">
+                                    <label for="inp-humedad-final-audit" style="font-size: 0.75rem; color: #94a3b8; margin: 0;">Simular / Auditar:</label>
+                                    <div style="display: flex; align-items: center; gap: 4px;">
+                                        <input type="number" id="inp-humedad-final-audit" value="13.8" step="0.1" min="10" max="25"
+                                            style="width: 72px; padding: 2px 6px; font-size: 0.82rem; height: 26px; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; font-weight: 700;"
+                                            title="Modifique el % para comprobar la reacción regulatoria inmediata">
+                                        <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 700;">%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Grado Comercial y Materia Extraña -->
+                            <div class="senasa-kpi-card">
+                                <div class="senasa-kpi-label">Grado Comercial y Materia Extraña</div>
+                                <div class="senasa-kpi-value-row">
+                                    <span class="senasa-kpi-value" id="kpi-grado-comercial" style="font-size: 1.15rem; color: #e2e8f0;">Grado 2</span>
+                                </div>
+                                <div class="senasa-kpi-subtext" id="kpi-materia-extrana">Impurezas &le; 1.0% | Granos Dañados &le; 3.0%</div>
+                                <div>
+                                    <span class="badge-analitico" style="background: rgba(14, 165, 233, 0.2); border: 1px solid #0284c7; color: #7dd3fc;">
+                                        📋 Norma SAGPyA 1075/94
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- 4. Volumen Neto Acondicionado -->
+                            <div class="senasa-kpi-card">
+                                <div class="senasa-kpi-label">Volumen Neto Acondicionado</div>
+                                <div class="senasa-kpi-value-row">
+                                    <span class="senasa-kpi-value" id="kpi-volumen-neto">--</span>
+                                    <span class="senasa-kpi-unit">TN</span>
+                                </div>
+                                <div class="senasa-kpi-subtext">Cantidad exacta disponible para exportación marítima</div>
+                                <div>
+                                    <span class="badge-analitico" style="background: rgba(45, 106, 79, 0.3); border: 1px solid #2d6a4f; color: #4ade80;">
+                                        ⚖️ Balanza Oficial Verificada
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- C. Módulo de Trazabilidad de Origen y Cumplimiento Normativo -->
+                    <div class="senasa-audit-section" id="senasa-modulo-trazabilidad">
+                        <div class="senasa-audit-title">
+                            <span>🌱 C. Módulo de Trazabilidad de Origen y Cumplimiento Normativo</span>
+                        </div>
+                        <p class="senasa-audit-subtitle">
+                            Auditoría de legalidad predial, georreferenciación parcelaria y documentación fiscal de transporte.
+                        </p>
+
+                        <!-- 1. Códigos RENSPA de origen asociados -->
+                        <div class="senasa-normative-card">
+                            <div class="senasa-normative-row">
+                                <div>
+                                    <strong style="color: #ffffff; font-size: 0.88rem;">Código(s) RENSPA de Origen Asociados:</strong>
+                                    <div id="senasa-lista-renspas" style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 8px;">
+                                        <!-- Se llena dinámicamente -->
+                                    </div>
+                                </div>
+                                <span class="badge-senasa-423">
+                                    🏛️ Validación: Res. SENASA N° 423/2014
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- 2. Coordenadas georreferenciadas y EUDR -->
+                        <div class="senasa-normative-card">
+                            <div class="senasa-normative-row">
+                                <div style="width: 100%;">
+                                    <strong style="color: #ffffff; font-size: 0.88rem;">Coordenadas Georreferenciadas de la Parcela:</strong>
+                                    <div id="senasa-lista-coordenadas" style="color: #cbd5e1; font-size: 0.85rem; margin-top: 6px; font-family: monospace;">
+                                        <!-- Se llena dinámicamente -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="badge-eudr-box">
+                                <span style="font-size: 1.3rem;">🌿</span>
+                                <div>
+                                    <strong style="color: #4ade80; display: block; margin-bottom: 2px;">Conformidad EUDR / Cero Deforestación:</strong>
+                                    <span>Parcela(s) de origen geomonitoreada(s) con dictamen conforme al Reglamento (UE) 2023/1115 (Libre de deforestación posterior al 31 de diciembre de 2020).</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Documentación de Traslado: Botón interactivo CPE (IPFS) -->
+                        <div class="senasa-normative-card" style="border-left: 4px solid #0284c7;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                                <div>
+                                    <strong style="color: #ffffff; font-size: 0.88rem;">Documentación de Traslado Oficial:</strong>
+                                    <p style="font-size: 0.8rem; color: #94a3b8; margin: 3px 0 0;">
+                                        Carta de Porte Electrónica (CPE ARCA/AFIP) recuperada desde el nodo IPFS Kubo local mediante su Hash CID.
+                                    </p>
+                                    <div id="senasa-cpe-cid-info" style="font-family: monospace; font-size: 0.78rem; color: #7dd3fc; margin-top: 4px;">
+                                        <!-- Hash CID dinámico -->
+                                    </div>
+                                </div>
+                                <div id="senasa-cpe-botones-container">
+                                    <button type="button" class="btn-inspeccionar-cpe" id="btn-inspeccionar-cpe">
+                                        <span>📄 Inspeccionar CPE (IPFS)</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div
-                        style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: 6px; margin-bottom: 14px; font-size: 0.85rem; color: #d1fae5;">
+                        style="background: rgba(0,0,0,0.25); padding: 12px; border-radius: 6px; margin-bottom: 14px; font-size: 0.85rem; color: #d1fae5; border-left: 3px solid #10b981;">
                         <div>🔍 <strong>Tareas de Acondicionamiento Verificadas en Silo:</strong> Secado, zarandeo,
-                            fumigación y tipificación comercial.</div>
+                            fumigación y tipificación comercial completadas.</div>
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">

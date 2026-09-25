@@ -301,7 +301,22 @@ app.get('/api/lotes/buscar', verificarRol(['Organismo de Control (SENASA/ARCA)']
       }
     }
 
-    res.json({ success: true, data: match, loteConsumido });
+    // Enriquecer cada lote con trazabilidad completa (desglose de orígenes, coordenadas de parcelas y CIDs de CPE)
+    // e indicadores analíticos de calidad y fitosanidad
+    const enrichedMatch = match.map(l => {
+      const traza = fabricLedger.obtenerTrazabilidadCompleta(l.id) || {};
+      return {
+        ...l,
+        desgloseOrigenes: traza.desgloseOrigenes || [],
+        arbolGenealogico: traza.arbolGenealogico || null,
+        humedadIngreso: l.humedadIngreso !== undefined ? l.humedadIngreso : (l.calidad && l.calidad.includes('14.2%') ? 14.2 : 15.2),
+        humedadFinal: l.humedadFinal !== undefined ? l.humedadFinal : 13.8,
+        gradoComercial: l.gradoComercial || (l.calidadParams && l.calidadParams.calidadComercial) || 'Grado 2 Oficial',
+        materiaExtrana: l.materiaExtrana || 'Impurezas <= 1.0% | Granos Dañados <= 3.0%'
+      };
+    });
+
+    res.json({ success: true, data: enrichedMatch, loteConsumido });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -356,6 +371,10 @@ app.post(['/api/lotes/acopio', '/api/lotes/recepcion-acopio'], verificarRol(['Ac
     if (calidad) {
       lote.calidad = calidad;
       lote.calidadComercial = calidad;
+      const matchHum = calidad.match(/(\d+(\.\d+)?)%/);
+      if (matchHum) {
+        lote.humedadIngreso = parseFloat(matchHum[1]);
+      }
     }
 
     const loteActualizado = fabricLedger.actualizarEstadoLogistico(
@@ -456,7 +475,10 @@ app.post('/api/lotes/notarizar', verificarRol(['Organismo de Control (SENASA/ARC
     const loteActualizado = fabricLedger.notarizarSenasa(idLote, {
       inspector,
       plagasCuarentenarias,
-      calidadTipificada
+      calidadTipificada,
+      humedadIngreso: datosInspeccion.humedadIngreso,
+      humedadFinal: datosInspeccion.humedadFinal,
+      materiaExtrana: datosInspeccion.materiaExtrana
     }, req.user.rol, bfaHash);
 
     res.json({
@@ -750,9 +772,30 @@ app.get('/api/lotes/:id', (req, res) => {
   }
 });
 
+// Endpoint administrativo para resetear/limpiar todos los lotes del sistema
+app.post(['/api/admin/reset', '/api/lotes/reset'], (req, res) => {
+  fabricLedger.limpiar();
+  console.log('🧹 Todos los lotes han sido eliminados del World State (sistema en 0).');
+  res.json({
+    success: true,
+    message: 'Todos los datos de lotes han sido eliminados. El sistema está en 0.'
+  });
+});
+
+// Endpoint administrativo para sembrar datos de demostración a demanda
+app.post('/api/admin/seed', (req, res) => {
+  try {
+    seedDemo();
+    console.log('🌱 Datos de demostración sembrados exitosamente.');
+    res.json({ success: true, message: 'Datos de demostración cargados exitosamente.' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 const PORT = 3000;
 const seedDemo = require('./seed_demo');
-if (process.env.SEED_DEMO !== 'false') {
+if (process.env.SEED_DEMO === 'true') {
   try {
     seedDemo();
   } catch (e) {
@@ -763,3 +806,4 @@ if (process.env.SEED_DEMO !== 'false') {
 app.listen(PORT, () => {
   console.log(`🚀 Backend AgTech Node.js corriendo en http://localhost:${PORT}`);
 });
+
